@@ -267,239 +267,576 @@ class MainWindow(QMainWindow):
             elif path:
                 file_paths.append(path)
 
-        if le…12696 tokens truncated… model loads rows lazily, so a row may not be fetched yet
-                if not model.canFetchMore():
-                    break
-                model.fetchMore()
-                continue
-            row_id = model.record(row).value("id")
-            if row_id in remaining_ids:
-                remaining_ids.discard(row_id)
-                removed_ids.append(row_id)
-                # Removed rows stay in the model until submitAll()
-                model.removeRow(row)
-            row += 1
-        if model.submitAll():
-            for id in removed_ids:
-                metadata_cache.delete_metadata(id)
+        if len(file_paths) == 0:
+            event.ignore()
+            return
 
-    def transcription(self, index: QModelIndex) -> Transcription:
-        return Transcription.from_record(self.model().record(index.row()))
+        event.setDropAction(Qt.DropAction.CopyAction)
+        event.accept()
+        self.open_file_transcriber_widget(file_paths=file_paths)
 
-    def refresh_all(self):
-        self.model().select()
+    def on_file_transcriber_triggered(
+        self,
+        options: Tuple[
+            TranscriptionOptions,
+            FileTranscriptionOptions,
+            str,
+            SpeakerIdentificationOptions,
+        ],
+    ):
+        (
+            transcription_options,
+            file_transcription_options,
+            model_path,
+            speaker_options,
+        ) = options
+        speaker_task_options = dict(
+            identify_speakers=speaker_options.identify_speakers,
+            speaker_diarizer=speaker_options.speaker_diarizer,
+            speaker_count=speaker_options.speaker_count,
+            merge_speaker_sentences=speaker_options.merge_speaker_sentences,
+        )
 
-    def refresh_row(self, id: UUID):
-        for i in range(self.model().rowCount()):
-            record = self.model().record(i)
-            if record.value("id") == str(id):
-                self.model().selectRow(i)
-                return
+        if file_transcription_options.file_paths is not None:
+            for file_path in file_transcription_options.file_paths:
+                task = FileTranscriptionTask(
+                    transcription_options=transcription_options,
+                    file_transcription_options=file_transcription_options,
+                    model_path=model_path,
+                    file_path=file_path,
+                    source=FileTranscriptionTask.Source.FILE_IMPORT,
+                    **speaker_task_options,
+                )
+                self.add_task(task)
+        else:
+            task = FileTranscriptionTask(
+                transcription_options=transcription_options,
+                file_transcription_options=file_transcription_options,
+                model_path=model_path,
+                url=file_transcription_options.url,
+                source=FileTranscriptionTask.Source.URL_IMPORT,
+                **speaker_task_options,
+            )
+            self.add_task(task)
+
+    def on_clear_history_action_triggered(self):
+        selected_rows = self.table_widget.selectionModel().selectedRows()
+        if len(selected_rows) == 0:
+            return
+
+        # Queued and running transcriptions can be deleted too. Cancel them
+        # along with deleting their rows, or the queue worker still transcribes
+        # them and can't save the result.
+        selected_transcriptions = [
+            self.table_widget.transcription(row) for row in selected_rows
+        ]
+        selected_transcription_ids = [
+            transcription.id_as_uuid for transcription in selected_transcriptions
+        ]
+        active_transcription_ids = [
+            transcription.id_as_uuid
+            for transcription in selected_transcriptions
+            if transcription.status_as_status
+            in (
+                FileTranscriptionTask.Status.QUEUED,
+                FileTranscriptionTask.Status.IN_PROGRESS,
+            )
+        ]
+
+        question_box = QMessageBox()
+        question_box.setWindowTitle(_("Clear History"))
+        question_box.setIcon(QMessageBox.Icon.Question)
+        question_box.setText(
+            _(
+                "Are you sure you want to delete the selected transcription(s)? "
+                "This action cannot be undone."
+            ),
+        )
+        question_box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        question_box.button(QMessageBox.StandardButton.Yes).setText(_("Ok"))
+        question_box.button(QMessageBox.StandardButton.No).setText(_("Cancel"))
+
+        reply = question_box.exec()
+
+        if reply == QMessageBox.StandardButton.Yes:
+            for transcription_id in active_transcription_ids:
+                self.transcriber_worker.cancel_task(transcription_id)
+            # By id, as the table can refresh while the dialog is open and
+            # then the selected row numbers point at other transcriptions
+            self.table_widget.delete_transcriptions(selected_transcription_ids)
+
+    def on_stop_transcription_action_triggered(self):
+        selected_transcriptions = self.table_widget.selected_transcriptions()
+        for transcription in selected_transcriptions:
+            transcription_id = transcription.id_as_uuid
+            self.transcriber_worker.cancel_task(transcription_id)
+            self.transcription_service.update_transcription_as_canceled(
+                transcription_id
+            )
+            self.table_widget.refresh_row(transcription_id)
+            self.on_table_selection_changed()
+
+    def on_new_transcription_action_triggered(self):
+        last_folder = self.settings.value(Settings.Key.LAST_IMPORT_FOLDER, "")
+
+        (file_paths, __) = QFileDialog.getOpenFileNames(
+            self, _("Select audio file"), last_folder, SUPPORTED_AUDIO_FORMATS
+        )
+        if len(file_paths) == 0:
+            return
+        file_paths = [resolve_document_portal_path(path) for path in file_paths]
+
+        self.settings.set_value(
+            Settings.Key.LAST_IMPORT_FOLDER, os.path.dirname(file_paths[0])
+        )
+
+        self.open_file_transcriber_widget(file_paths)
+
+    def on_new_url_transcription_action_triggered(self):
+        url = ImportURLDialog.prompt(parent=self)
+        if url is not None:
+            self.open_file_transcriber_widget(url=url)
+
+    def on_import_folder_action_triggered(self):
+        last_folder = self.settings.value(Settings.Key.LAST_IMPORT_FOLDER, "")
+        folder = QFileDialog.getExistingDirectory(
+            self, _("Select folder"), last_folder
+        )
+        if not folder:
+            return
+        folder = resolve_document_portal_path(folder)
+        self.settings.set_value(Settings.Key.LAST_IMPORT_FOLDER, folder)
+        file_paths = find_media_files_in_folder(folder)
+        if not file_paths:
+            return
+        self.open_file_transcriber_widget(file_paths)
+
+    def open_file_transcriber_widget(
+        self, file_paths: Optional[List[str]] = None, url: Optional[str] = None
+    ):
+        file_transcriber_window = FileTranscriberWidget(
+            file_paths=file_paths,
+            url=url,
+            parent=self,
+            flags=Qt.WindowType.Window,
+        )
+        file_transcriber_window.triggered.connect(self.on_file_transcriber_triggered)
+        file_transcriber_window.openai_access_token_changed.connect(
+            self.on_openai_access_token_changed
+        )
+        file_transcriber_window.show()
+        file_transcriber_window.raise_()
+        file_transcriber_window.activateWindow()
 
     @staticmethod
-    def format_timedelta(delta: timedelta):
-        mm, ss = divmod(delta.seconds, 60)
-        result = f"{ss}s"
-        if mm == 0:
-            return result
-        hh, mm = divmod(mm, 60)
-        result = f"{mm}m {result}"
-        if hh == 0:
-            return result
-        return f"{hh}h {result}"
-
-    def on_rename_action(self):
-        selected_rows = self.selectionModel().selectedRows()
-        if not selected_rows:
-            return
-        
-        # Get the first selected transcription
-        transcription = self.transcription(selected_rows[0])
-        
-        # Get current name or fallback to file name
-        current_name = transcription.name or (
-            transcription.url if transcription.url 
-            else os.path.basename(transcription.file) if transcription.file 
-            else ""
-        )
-        
-        # Show input dialog
-        from PyQt6.QtWidgets import QInputDialog
-        new_name, ok = QInputDialog.getText(
-            self, 
-            _("Rename Transcription"), 
-            _("Enter new name:"), 
-            text=current_name
-        )
-        
-        if ok and new_name.strip():
-            # Update the transcription name
-            from uuid import UUID
-            self.transcription_service.update_transcription_name(
-                UUID(transcription.id), 
-                new_name.strip()
+    def on_openai_access_token_changed(access_token: str):
+        try:
+            set_password(Key.OPENAI_API_KEY, access_token)
+        except Exception as exc:
+            logging.error("Unable to write to keyring: %s", exc)
+            QMessageBox.critical(
+                None, _("Error"), _("Unable to save OpenAI API key to keyring")
             )
-            self.refresh_all()
 
-    def on_notes_action(self):
-        selected_rows = self.selectionModel().selectedRows()
-        if not selected_rows:
-            return
-        
-        # Get the first selected transcription
-        transcription = self.transcription(selected_rows[0])
-        
-        # Show input dialog for notes
-        from PyQt6.QtWidgets import QInputDialog
-        current_notes = transcription.notes or ""
-        new_notes, ok = QInputDialog.getMultiLineText(
-            self, 
-            _("Notes"),
-            _("Enter some relevant notes for this transcription:"),
-            text=current_notes
+    def open_transcript_viewer(self):
+        selected_rows = self.table_widget.selectionModel().selectedRows()
+        for selected_row in selected_rows:
+            transcription = self.table_widget.transcription(selected_row)
+            self.open_transcription_viewer(transcription)
+
+    def on_table_selection_changed(self):
+        self.toolbar.set_open_transcript_action_enabled(
+            self.should_enable_open_transcript_action()
         )
-        
-        if ok:
-            # Update the transcription notes
-            from uuid import UUID
-            self.transcription_service.update_transcription_notes(
-                UUID(transcription.id), 
-                new_notes
+        self.toolbar.set_stop_transcription_action_enabled(
+            self.should_enable_stop_transcription_action()
+        )
+        self.toolbar.set_clear_history_action_enabled(
+            self.should_enable_clear_history_action()
+        )
+
+    def should_enable_open_transcript_action(self):
+        selected_transcriptions = self.table_widget.selected_transcriptions()
+        if len(selected_transcriptions) == 0:
+            return False
+        return all(
+            MainWindow.can_open_transcript(transcription)
+            for transcription in selected_transcriptions
+        )
+
+    @staticmethod
+    def can_open_transcript(transcription: Transcription) -> bool:
+        return FileTranscriptionTask.Status(transcription.status) in (
+            FileTranscriptionTask.Status.COMPLETED,
+            FileTranscriptionTask.Status.SKIPPED,
+        )
+
+    def should_enable_stop_transcription_action(self):
+        return self.selected_tasks_have_status(
+            [
+                FileTranscriptionTask.Status.IN_PROGRESS,
+                FileTranscriptionTask.Status.QUEUED,
+            ]
+        )
+
+    def should_enable_clear_history_action(self):
+        # Queued and running transcriptions are canceled when deleted
+        return len(self.table_widget.selected_transcriptions()) > 0
+
+    def selected_tasks_have_status(self, statuses: List[FileTranscriptionTask.Status]):
+        transcriptions = self.table_widget.selected_transcriptions()
+        if len(transcriptions) == 0:
+            return False
+
+        return all(
+            [
+                transcription.status_as_status in statuses
+                for transcription in transcriptions
+            ]
+        )
+
+    def on_table_double_clicked(self, index: QModelIndex):
+        transcription = self.table_widget.transcription(index)
+        if not MainWindow.can_open_transcript(transcription):
+            return
+        self.open_transcription_viewer(transcription)
+
+    def open_transcription_viewer(self, transcription: Transcription):
+        self.transcription_viewer_widget = TranscriptionViewerWidget(
+            transcription=transcription,
+            transcription_service=self.transcription_service,
+            shortcuts=self.shortcuts,
+            parent=self,
+            flags=Qt.WindowType.Window,
+            transcriptions_updated_signal=self.transcriptions_updated,
+        )
+        # Free the viewer and its media player once closed. Otherwise every
+        # closed viewer lingers until exit, holding its decoded audio, and
+        # PyQt's cleanup at interpreter exit segfaults on its media player.
+        self.transcription_viewer_widget.setAttribute(
+            Qt.WidgetAttribute.WA_DeleteOnClose
+        )
+        self.transcription_viewer_widget.viewer_closed.connect(
+            self.on_transcription_viewer_closed
+        )
+        self.transcription_viewer_widget.show()
+
+    def on_transcription_viewer_closed(self, transcription_id: UUID, modified: bool):
+        """Run the plugins' on_viewer_closed hook for the closed transcript."""
+        if not self.plugin_manager.has_enabled_post_hooks():
+            return
+        # Read after the viewer saved its last edit, with the current name and notes
+        transcription = self.transcription_service.get_transcription(transcription_id)
+        if transcription is None:  # Deleted while the viewer was open
+            return
+
+        # While quitting, run synchronously so the work isn't cut short
+        if self._quitting:
+            self.plugin_manager.run_on_viewer_closed(transcription, modified)
+            return
+        runnable = FnRunnable(
+            lambda: self.plugin_manager.run_on_viewer_closed(transcription, modified)
+        )
+        # Plugin notes or segments may have changed
+        runnable.signals.finished.connect(
+            lambda: self.table_widget.refresh_row(transcription_id)
+        )
+        QThreadPool.globalInstance().start(runnable)
+
+    def add_task(self, task: FileTranscriptionTask):
+        self.transcription_service.create_transcription(task)
+        self.table_widget.refresh_all()
+        self.transcriber_worker.add_task(task)
+
+    def on_folder_watch_task_found(self, task: FileTranscriptionTask):
+        # Listed as queued right away; the watcher hands the task to the
+        # transcriber only once the file has finished copying.
+        self.transcription_service.create_transcription(task)
+        self.table_widget.refresh_all()
+
+    def on_folder_watch_task_settled(self, task: FileTranscriptionTask):
+        # Skip it if it was stopped or deleted while its file was copying
+        if self.transcription_service.is_transcription_queued(task.uid):
+            self.transcriber_worker.add_task(task)
+
+    def on_folder_watch_task_discarded(self, task: FileTranscriptionTask):
+        self.transcription_service.update_transcription_as_canceled(task.uid)
+        self.table_widget.refresh_row(task.uid)
+
+    def on_transcriptions_updated(self):
+        self.table_widget.refresh_all()
+
+    def on_task_started(self, task: FileTranscriptionTask):
+        self.transcription_service.update_transcription_as_started(task.uid)
+        self.table_widget.refresh_row(task.uid)
+
+    def on_task_progress(self, task: FileTranscriptionTask, progress: float):
+        self.transcription_service.update_transcription_progress(task.uid, progress)
+        self.table_widget.refresh_row(task.uid)
+
+    def on_task_download_progress(
+        self, task: FileTranscriptionTask, fraction_downloaded: float
+    ):
+        from buzz.transcriber.cloud_transcription import STAGES
+        fraction = max(0.0, min(fraction_downloaded, 1.0))
+        STAGES[str(task.uid)] = f"Downloading audio ({fraction:.0%})"
+        self.on_task_progress(task, fraction * 0.2)
+
+    def on_task_completed(self, task: FileTranscriptionTask, segments: List[Segment]):
+        from buzz.transcriber.cloud_transcription import STAGES
+        STAGES.pop(str(task.uid), None)
+        # A result already on its way when the transcription was deleted or
+        # canceled. Saving it would fail the segments' foreign key of a deleted
+        # row, or turn a canceled one into completed.
+        if self.transcription_service.is_transcription_deleted_or_canceled(task.uid):
+            logging.debug(f"Ignoring result of deleted or canceled task {task.uid}")
+            self.delete_metadata_if_transcription_deleted(task)
+            self.quit_if_all_tasks_done(task)
+            return
+
+        try:
+            self.save_completed_task(task, segments)
+        except Exception as e:
+            self.on_task_save_failed(task, str(e))
+
+        self.quit_if_all_tasks_done(task)
+
+    def save_completed_task(self, task: FileTranscriptionTask, segments: List[Segment]):
+        # Handle skipped tasks (e.g. plugin detected file already transcribed)
+        if task.status == FileTranscriptionTask.Status.SKIPPED:
+            self.transcription_service.update_transcription_as_skipped(task.uid, segments)
+            self.table_widget.refresh_row(task.uid)
+            return
+
+        # Update file path in database only for URL imports where file is downloaded
+        if task.source == FileTranscriptionTask.Source.URL_IMPORT and task.file_path:
+            # With speech extraction, file_path is the temporary speech file,
+            # which is deleted once the task completes. Keep the downloaded audio.
+            audio_path = task.original_file_path or task.file_path
+            logging.debug(f"Updating transcription file path: {audio_path}")
+            # URL titles are UI metadata and must not be used as working paths.
+            basename = os.path.basename(audio_path)
+            name = task.display_name or os.path.splitext(basename)[0]
+            self.transcription_service.update_transcription_file_and_name(task.uid, audio_path, name)
+
+        # Folder watch moves the source file into the output directory, so the
+        # stored path has to follow it for the audio to stay playable.
+        if task.source == FileTranscriptionTask.Source.FOLDER_WATCH and task.file_path:
+            logging.debug(f"Updating transcription file path: {task.file_path}")
+            self.transcription_service.update_transcription_file_and_name(task.uid, task.file_path)
+
+        # When plugins are enabled, run the after_transcription / save / on_complete
+        # pipeline on a background thread so slow plugin work (e.g. network calls)
+        # doesn't freeze the UI. DB writes are marshaled back to the main thread by
+        # the plugin manager. When quitting on complete we run synchronously so the
+        # work isn't cut short.
+        run_async = (
+            self.plugin_manager.has_enabled_post_hooks() and not self.quit_on_complete
+        )
+        if run_async:
+            runnable = FnRunnable(
+                lambda: self.plugin_manager.process_completed(task, segments)
             )
-            self.refresh_all()
-
-    def on_restart_transcription_action(self):
-        """Restart the selected failed, canceled or skipped transcriptions"""
-        selected = self.selected_transcriptions()
-        if not selected:
-            return
-
-        # Rows that can't be restarted are left as they are
-        restartable = [
-            transcription
-            for transcription in selected
-            if transcription.status in ["failed", "canceled", "skipped"]
-        ]
-        if not restartable:
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.information(
-                self,
-                _("Cannot Restart"),
-                _("Only failed, canceled, or skipped transcriptions can be restarted.")
+            runnable.signals.finished.connect(
+                lambda: self.table_widget.refresh_row(task.uid)
             )
-            return
-
-        for transcription in restartable:
-            try:
-                self.transcription_service.reset_transcription_for_restart(UUID(transcription.id))
-                self._restart_transcription_task(transcription)
-            except Exception as e:
-                from PyQt6.QtWidgets import QMessageBox
-                QMessageBox.warning(
-                    self,
-                    _("Error"),
-                    _("Failed to restart transcription: {}").format(str(e))
-                )
-        self.refresh_all()
-    
-    def _restart_transcription_task(self, transcription):
-        """Create a new FileTranscriptionTask and add it to the queue worker"""
-        from buzz.transcriber.transcriber import (
-            FileTranscriptionTask, 
-            TranscriptionOptions, 
-            FileTranscriptionOptions,
-            Task
-        )
-        from buzz.model_loader import TranscriptionModel, ModelType
-        from buzz.transcriber.transcriber import OutputFormat
-        
-        # Recreate the transcription options from the database record
-        from buzz.model_loader import WhisperModelSize
-        
-        # Convert string whisper_model_size to enum if it exists
-        whisper_model_size = None
-        if transcription.whisper_model_size:
-            try:
-                whisper_model_size = WhisperModelSize(transcription.whisper_model_size)
-            except ValueError:
-                # If the stored value is invalid, use a default
-                whisper_model_size = WhisperModelSize.TINY
-        
-        transcription_options = TranscriptionOptions(
-            language=transcription.language if transcription.language else None,
-            task=Task(transcription.task) if transcription.task else Task.TRANSCRIBE,
-            model=TranscriptionModel(
-                model_type=ModelType(transcription.model_type) if transcription.model_type else ModelType.WHISPER,
-                whisper_model_size=whisper_model_size,
-                hugging_face_model_id=transcription.hugging_face_model_id
-            ),
-            # SQLite returns these BOOLEAN columns as 1 or 0
-            word_level_timings=transcription.word_level_timings == 1,
-            extract_speech=transcription.extract_speech == 1,
-            initial_prompt="",  # Not stored in database, use default
-            openai_access_token="",  # Not stored in database, use default
-            enable_llm_translation=False,  # Not stored in database, use default
-            llm_prompt="",  # Not stored in database, use default
-            llm_model=""  # Not stored in database, use default
-        )
-        
-        # Recreate the file transcription options
-        output_formats = set()
-        if transcription.export_formats:
-            for format_str in transcription.export_formats.split(','):
-                try:
-                    output_formats.add(OutputFormat(format_str.strip()))
-                except ValueError:
-                    pass  # Skip invalid formats
-        
-        file_transcription_options = FileTranscriptionOptions(
-            url=transcription.url if transcription.url else None,
-            output_formats=output_formats
-        )
-        
-        # Get the model path from the transcription options
-        model_path = transcription_options.model.get_local_model_path()
-        if model_path is None:
-            # If model is not available locally, we need to download it
-            from buzz.model_loader import ModelDownloader
-            ModelDownloader(model=transcription_options.model).run()
-            model_path = transcription_options.model.get_local_model_path()
-        
-        if model_path is None:
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.warning(
-                self, 
-                _("Error"), 
-                _("Could not restart transcription: model not available and could not be downloaded.")
+            # Plugin hook errors are caught inside the plugin manager, so an
+            # error here means the result could not be saved
+            runnable.signals.error.connect(
+                lambda e: self.on_task_save_failed(task, e)
             )
-            return
-        
-        # Create the new task
-        task = FileTranscriptionTask(
-            transcription_options=transcription_options,
-            file_transcription_options=file_transcription_options,
-            model_path=model_path,
-            file_path=transcription.file if transcription.file else None,
-            url=transcription.url if transcription.url else None,
-            output_directory=transcription.output_folder if transcription.output_folder else None,
-            source=FileTranscriptionTask.Source(transcription.source) if transcription.source else FileTranscriptionTask.Source.FILE_IMPORT,
-            uid=UUID(transcription.id)
-        )
-        
-        # Add the task to the queue worker
-        # We need to access the main window's transcriber worker
-        # This is a bit of a hack, but it's the cleanest way given the current architecture
-        main_window = self.parent()
-        while main_window and not hasattr(main_window, 'transcriber_worker'):
-            main_window = main_window.parent()
-        
-        if main_window and hasattr(main_window, 'transcriber_worker'):
-            main_window.transcriber_worker.add_task(task)
+            QThreadPool.globalInstance().start(runnable)
+        elif self.plugin_manager.has_enabled_post_hooks():
+            self.plugin_manager.process_completed(task, segments)
+            self.table_widget.refresh_row(task.uid)
         else:
-            # Fallback: show error if we can't find the transcriber worker
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.warning(
-                self, 
-                _("Error"), 
-                _("Could not restart transcription: transcriber worker not found.")
-            )
+            self.transcription_service.update_transcription_as_completed(task.uid, segments)
+            self.table_widget.refresh_row(task.uid)
+
+    def on_task_save_failed(self, task: FileTranscriptionTask, error: str):
+        # The save rolled back, so mark the task failed instead of leaving it
+        # in progress forever
+        logging.error(f"Failed to save result of task {task.uid}: {error}")
+        # Plugins run in the background, the task may have been canceled meanwhile
+        if self.transcription_service.is_transcription_deleted_or_canceled(task.uid):
+            return
+        self.transcription_service.update_transcription_as_failed(task.uid, error)
+        self.table_widget.refresh_row(task.uid)
+
+    def quit_if_all_tasks_done(self, task: FileTranscriptionTask):
+        if not self.quit_on_complete:
+            return
+
+        self.pending_quit_task_uids.discard(task.uid)
+        if len(self.pending_quit_task_uids) > 0:
+            return
+
+        self.system_tray.quit()
+
+    def delete_metadata_if_transcription_deleted(self, task: FileTranscriptionTask):
+        # The transcriber may save metadata after the transcription was deleted
+        if self.transcription_service.is_transcription_deleted(task.uid):
+            self.transcription_service.delete_transcription_metadata(task.uid)
+
+    def on_task_error(self, task: FileTranscriptionTask, error: str):
+        from buzz.transcriber.cloud_transcription import STAGES
+        STAGES.pop(str(task.uid), None)
+        if not self.transcription_service.is_transcription_deleted_or_canceled(task.uid):
+            self.transcription_service.update_transcription_as_failed(task.uid, error)
+            self.table_widget.refresh_row(task.uid)
+        else:
+            self.delete_metadata_if_transcription_deleted(task)
+
+        self.quit_if_all_tasks_done(task)
+
+    def on_shortcuts_changed(self):
+        self.menu_bar.reset_shortcuts()
+        self.toolbar.reset_shortcuts()
+
+    def resizeEvent(self, event):
+        self.save_geometry()
+
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        self._quitting = True
+        self.system_tray.shutdown()
+        self.save_geometry()
+        self.settings.settings.sync()
+        self.sleep_inhibitor.close()
+
+        if self.folder_watcher:
+            try:
+                self.folder_watcher.task_found.disconnect()
+                self.folder_watcher.task_settled.disconnect()
+                self.folder_watcher.task_discarded.disconnect()
+                if len(self.folder_watcher.directories()) > 0:
+                    self.folder_watcher.removePaths(self.folder_watcher.directories())
+            except Exception as e:
+                logging.warning(f"Error cleaning up folder watcher: {e}")
+
+        try:
+            self.transcriber_worker.task_started.disconnect()
+            self.transcriber_worker.task_progress.disconnect()
+            self.transcriber_worker.task_download_progress.disconnect()
+            self.transcriber_worker.task_error.disconnect()
+            self.transcriber_worker.task_completed.disconnect()
+        except Exception as e:
+            logging.warning(f"Error disconnecting signals: {e}")
+
+        self.transcriber_worker.stop()
+        self.transcriber_thread.quit()
+
+        if self.transcriber_thread.isRunning():
+            if not self.transcriber_thread.wait(10000):
+                logging.warning("Transcriber thread did not finish within 10s timeout, terminating")
+                self.transcriber_thread.terminate()
+                if not self.transcriber_thread.wait(2000):
+                    logging.error("Transcriber thread could not be terminated")
+
+        # Several viewers can be open at once, close them all. Delete them right
+        # away as the app may exit before their deferred deletion runs, and
+        # PyQt's cleanup at interpreter exit segfaults on their media players.
+        for viewer in self.findChildren(TranscriptionViewerWidget):
+            viewer.close()
+            sip.delete(viewer)
+        self.transcription_viewer_widget = None
+
+        try:
+            from buzz.widgets.application import Application
+            app = Application.instance()
+            if app and hasattr(app, 'close_database'):
+                app.close_database()
+        except Exception as e:
+            logging.warning(f"Error closing database: {e}")
+
+        logging.debug("MainWindow closeEvent completed")
+
+        super().closeEvent(event)
+
+    def save_geometry(self):
+        self.settings.begin_group(Settings.Key.MAIN_WINDOW)
+        self.settings.settings.setValue("geometry", self.saveGeometry())
+        self.settings.end_group()
+
+    def load_geometry(self):
+        self.settings.begin_group(Settings.Key.MAIN_WINDOW)
+        geometry = self.settings.settings.value("geometry")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        else:
+            self.setBaseSize(1240, 600)
+            self.resize(1240, 600)
+        self.settings.end_group()
+
+    def _init_update_checker(self):
+        """Initializes and runs the update checker."""
+        self.update_checker = UpdateChecker(settings=self.settings, parent=self)
+        self.update_checker.update_available.connect(self._on_update_available)
+
+        # Allow disabling the automatic startup update check (e.g. in tests).
+        # An in-flight QNetworkAccessManager request interferes with
+        # ``multiprocessing`` spawn on Windows and crashes child transcription
+        # processes; tests should also never depend on network availability.
+        if os.getenv("BUZZ_DISABLE_UPDATE_CHECK"):
+            logging.debug("Startup update check disabled via BUZZ_DISABLE_UPDATE_CHECK")
+            return
+
+        # Check for updates on startup
+        self.update_checker.check_for_updates()
+
+    def _on_update_available(self, update_info: UpdateInfo):
+        """Called when an update is available."""
+        self._update_info = update_info
+        self.toolbar.set_update_available(True)
+
+    def _maybe_show_cuda_prompt(self):
+        """On first launch (Windows/Linux), offer CUDA installation if an NVIDIA GPU is present."""
+        from buzz import cuda_manager
+        is_nvidia_gpu_present = cuda_manager.is_nvidia_gpu_present()
+
+        logging.debug(f"Nvidia GPU detected: {is_nvidia_gpu_present}")
+
+        if not is_nvidia_gpu_present:
+            return
+        if not cuda_manager.should_offer_cuda_prompt():
+            return
+        # Checked before is_cuda_torch_installed(), which imports torch and would
+        # otherwise add about a second to every launch after the first.
+        if self.settings.value(Settings.Key.CUDA_PROMPT_SHOWN, False):
+            return
+        # The packaged builds all ship CPU-only torch, so this only ever fires
+        # for a pip or source install where the user set up CUDA themselves.
+        # Offering them a second, shadowing torch would be worse than useless.
+        if cuda_manager.is_cuda_torch_installed():
+            logging.debug("CUDA torch already available; not offering the install")
+            return
+        self.settings.set_value(Settings.Key.CUDA_PROMPT_SHOWN, True)
+
+        from PyQt6.QtCore import QTimer
+        from buzz.widgets.cuda_installer_widget import CudaInstallerDialog
+
+        def _show():
+            dialog = CudaInstallerDialog(self)
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+
+        # Owned by the window, so the timer is destroyed with it. A bare
+        # QTimer.singleShot would still fire after the window was deleted,
+        # e.g. when it closes within 500 ms.
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(_show)
+        timer.start(500)
+
+    def on_update_action_triggered(self):
+        """Called when user clicks the update action in toolbar."""
+        if self._update_info is None:
+            return
+
+        dialog = UpdateDialog(
+            update_info=self._update_info,
+            parent=self
+        )
+        dialog.exec()
