@@ -1,6 +1,6 @@
 # Buzz — Mahmoud Basuony fork
 
-[العربية](readme/README.ar.md) · [Upstream project](https://github.com/chidiwilliams/buzz) · [Upstream documentation](https://chidiwilliams.github.io/buzz/) · [中文（上游）](readme/README.zh_CN.md)
+[Upstream project](https://github.com/chidiwilliams/buzz) · [Upstream documentation](https://chidiwilliams.github.io/buzz/) · [中文（上游）](readme/README.zh_CN.md)
 
 Transcribe audio, video files and YouTube videos, then review, edit and export
 the resulting text. Local models run on your computer; supported API services
