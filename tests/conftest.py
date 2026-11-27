@@ -45,6 +45,17 @@ if "BUZZ_TEST_SETTINGS_DIR" not in os.environ:
         prefix="buzz-test-settings-"
     )
 TEST_SETTINGS_DIR = os.environ["BUZZ_TEST_SETTINGS_DIR"]
+# QApplication is session-scoped and constructs its own MainWindow before
+# function-scoped fixtures run. Isolate every startup store before importing
+# application modules, including the credential fallback and plugin loader.
+import platformdirs
+
+platformdirs.user_data_dir = lambda *args, **kwargs: os.path.join(TEST_SETTINGS_DIR, "data")
+platformdirs.user_cache_dir = lambda *args, **kwargs: os.path.join(TEST_SETTINGS_DIR, "cache")
+platformdirs.user_documents_dir = lambda *args, **kwargs: os.path.join(TEST_SETTINGS_DIR, "Documents")
+os.environ["PYTHON_KEYRING_BACKEND"] = "keyring.backends.null.Keyring"
+os.environ["BUZZ_DISABLE_TELEMETRY"] = "1"
+os.environ["BUZZ_MODEL_ROOT"] = os.path.join(TEST_SETTINGS_DIR, "models")
 # The transcription metadata cache too, so tests never write into the user's
 # Buzz cache. Inside the settings folder, so it is deleted with it.
 os.environ.setdefault(
