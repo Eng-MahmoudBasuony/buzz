@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Buzz — YouTube to Text",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "ابدأ تفريغ فيديو يوتيوب في Buzz بضغطة واحدة.",
   "permissions": [
     "activeTab",

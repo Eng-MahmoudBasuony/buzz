@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Buzz — تثبيت إضافة Chrome</title>
+<style>
+body{margin:0;background:#f3f5fa;color:#253149;font:18px/1.8 system-ui,sans-serif}
+main{max-width:800px;margin:48px auto;padding:36px;background:white;border-radius:18px}
+h1{line-height:1.4}li{margin:14px 0}code{direction:ltr;unicode-bidi:isolate;display:inline-block;background:#eef1f7;padding:3px 8px;border-radius:5px;overflow-wrap:anywhere}
+.path{display:block;text-align:left;padding:16px}a{color:#a52e3b}hr{border:0;border-top:1px solid #e3e7ef;margin:32px 0}small{color:#546079}
+</style>
+<main>
+<h1>من فيديو يوتيوب إلى نص، بضغطة واحدة</h1>
+<p>الحزمة دي بتثبّت إضافة Buzz وتربطها بالبرنامج، من غير تنزيل السورس كود أو تثبيت أدوات برمجة.</p>
+<ol>
+<li>ثبّت <a href="https://github.com/Eng-MahmoudBasuony/buzz/releases/tag/v1.4.6-mb.1">نسخة Buzz للماك</a> داخل <code>Applications</code>.</li>
+<li>فكّ ضغط حزمة الإضافة، ثم انقر مرتين على <code>Install Buzz Extension.command</code>. انتظر رسالة اكتمال التثبيت، وبعدها اقفل Buzz وافتحه تاني مرة واحدة.</li>
+<li>افتح Chrome واكتب <code>chrome://extensions</code> في شريط العنوان، وفعّل <code>Developer mode</code>.</li>
+<li>اختر <code>Load unpacked</code>. اضغط <code>Command + Shift + G</code> والصق المسار ده:
+<code class="path">~/Library/Application Support/Buzz/Chrome/extension</code>
+ثم اضغط <code>Open</code>. لو عندك نسخة Buzz قديمة في Chrome محمّلة من مجلد آخر، احذف الإضافة القديمة أولًا.</li>
+<li>ثبّت أيقونة <code>Buzz — YouTube to Text</code> بجوار شريط العنوان. افتح فيديو يوتيوب واضغط عليها؛ النص هيفتح تلقائيًا في Buzz لما يخلص.</li>
+</ol>
+<p>اختَر النموذج ولغة الفيديو من Buzz. للاستخدام المجاني، نزّل نموذجًا محليًا مرة واحدة. استخدام API اختياري وتكلفته حسب مزوّد الخدمة.</p>
+<p><small>تقدر تحذف مجلد الحزمة من Downloads بعد التثبيت. احتفظ بمجلد الإضافة داخل Library. عند تحديث الحزمة، شغّل ملف التثبيت ثم اضغط Reload على بطاقة الإضافة في Chrome.</small></p>
+<hr>
+<section lang="en" dir="ltr">
+<h2>Quick start</h2>
+<ol>
+<li>Install the matching Buzz.app in Applications and extract this setup ZIP.</li>
+<li>Double-click <code>Install Buzz Extension.command</code>. It installs a permanent copy and registers the connection to Buzz. Quit and reopen Buzz once afterward. No Python, uv, repository checkout or administrator password is required.</li>
+<li>Open <code>chrome://extensions</code>, enable Developer mode, and select Load unpacked. Use Command+Shift+G to select:<code class="path">~/Library/Application Support/Buzz/Chrome/extension</code></li>
+<li>Remove an older Buzz extension loaded from a different folder first. Pin the Buzz toolbar icon and click it on a YouTube video.</li>
+</ol>
+<p>Local models must already be downloaded in Buzz. Optional API usage is billed separately by the provider. This package does not contain or request API keys.</p>
+<p>On an update, rerun setup and reload the extension in Chrome. You may delete the downloaded setup folder afterward; keep the installed extension folder.</p>
+</section>
+</main>
+</html>

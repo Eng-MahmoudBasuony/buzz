@@ -75,17 +75,28 @@ Read the [Arabic interface notes](docs/docs/arabic-ui.md) and
 
 ## Set up the Chrome extension
 
-1. Install a matching build of this fork as `/Applications/Buzz.app`.
-2. From a prepared source checkout, register the local bridge:
+1. Install Buzz in `/Applications`, then download and extract the
+   **[Chrome setup ZIP](https://github.com/Eng-MahmoudBasuony/buzz/releases/download/v1.4.6-mb.1/Buzz-Chrome-Setup-1.0.1-macOS.zip)**.
+2. Double-click **Install Buzz Extension.command** inside the extracted folder.
+   Setup copies the extension to a permanent location and connects it to Buzz.
+   It uses built-in macOS tools: no Python, uv or source checkout is needed.
+   Quit and reopen Buzz once after setup.
+3. In Chrome, open `chrome://extensions`, enable **Developer mode**, and choose
+   **Load unpacked**. Press **Command+Shift+G** and select:
 
-   ```sh
-   uv run --no-sync python scripts/install_browser_extension.py
+   ```text
+   ~/Library/Application Support/Buzz/Chrome/extension
    ```
 
-3. Open Chrome's extension manager, enable **Developer mode**, choose **Load
-   unpacked**, and select the repository's `browser-extension` folder.
+   If an older Buzz extension was loaded from a different folder, remove that
+   extension first. This one-time Chrome step is manual.
 4. Pin **Buzz — YouTube to Text**, open a YouTube video, and click its toolbar
    icon. Buzz opens the transcript automatically after completion.
+
+You may delete the downloaded setup folder afterward; keep the installed
+extension folder. For updates, rerun setup and reload the extension in Chrome.
+The ZIP includes an Arabic/English **Quick Start.html** guide. Its checksum is
+available as **Buzz-Chrome-Setup-1.0.1-macOS.zip.sha256** in the same release.
 
 The extension uses Buzz's saved model and language settings. Download a local
 model first, or configure an API service in Buzz. API costs, if any, are charged
