@@ -198,6 +198,7 @@ app = BUNDLE(
     bundle_identifier="com.chidiwilliams.buzz",
     version=VERSION,
     info_plist={
+        "MBBrowserBridgeProtocol": "1",
         "NSPrincipalClass": "NSApplication",
         "NSHighResolutionCapable": "True",
         "NSMicrophoneUsageDescription": "Allow Buzz to record audio from your microphone.",

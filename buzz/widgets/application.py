@@ -104,6 +104,13 @@ class Application(QApplication):
 
         self.window = MainWindow(transcription_service)
 
+        self.browser_controller = None
+        if sys.platform == "darwin":
+            from buzz.browser_integration.controller import start_if_enabled
+            self.browser_controller = start_if_enabled(self.window, self.settings)
+            if self.browser_controller is not None:
+                self.aboutToQuit.connect(self.browser_controller.close)
+
         disable_telemetry = os.getenv("BUZZ_DISABLE_TELEMETRY", None)
 
         if not disable_telemetry:
