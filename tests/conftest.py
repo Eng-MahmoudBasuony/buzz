@@ -251,9 +251,11 @@ def isolated_cloud_transcription_cache(tmp_path, monkeypatch):
     """Keep audio/checkpoints and implicit URL exports out of the user's folders."""
     import platformdirs
     from buzz.transcriber import cloud_transcription
+    from buzz.plugins import loader
 
     monkeypatch.setattr(cloud_transcription, "ROOT", tmp_path / "cloud-transcription")
     monkeypatch.setattr(platformdirs, "user_documents_dir", lambda *args, **kwargs: str(tmp_path / "Documents"))
+    monkeypatch.setattr(loader, "user_cache_dir", lambda *args, **kwargs: str(tmp_path / "plugin-cache"))
     cloud_transcription.STAGES.clear()
     yield
     cloud_transcription.STAGES.clear()
