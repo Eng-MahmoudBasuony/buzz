@@ -9,11 +9,26 @@ from buzz.db.entity.transcription import Transcription
 from buzz.model_loader import ModelType, TranscriptionModel
 from buzz.transcriber.transcriber import FileTranscriptionTask, Task
 from buzz.widgets.main_window import MainWindow
+from buzz.settings.settings import Settings
 from buzz.widgets.transcriber.file_transcriber_widget import FileTranscriberWidget
 from buzz.widgets.transcription_viewer.studio_panels import WaveformSeekBar
 from buzz.widgets.transcription_viewer.transcription_viewer_widget import (
     TranscriptionViewerWidget,
 )
+
+
+@pytest.fixture(autouse=True)
+def preserve_transcription_preferences(qapp):
+    settings = Settings().settings
+    settings.beginGroup("file_transcriber")
+    saved = {key: settings.value(key) for key in settings.allKeys()}
+    settings.endGroup()
+    yield
+    settings.beginGroup("file_transcriber")
+    settings.remove("")
+    for key, value in saved.items():
+        settings.setValue(key, value)
+    settings.endGroup()
 
 
 @pytest.fixture
@@ -183,3 +198,37 @@ def test_opening_studio_never_requests_keychain_access(qtbot, window, tmp_path):
         qtbot.addWidget(viewer)
         assert viewer.openai_access_token is None
         viewer.close()
+
+
+def test_preparing_local_transcription_never_requests_keychain(qtbot):
+    with patch("buzz.widgets.transcriber.file_transcriber_widget.get_password", side_effect=AssertionError("Unexpected credential access")):
+        widget = FileTranscriberWidget(
+            url="https://youtu.be/abcdefghijk",
+            initial_model=TranscriptionModel(model_type=ModelType.WHISPER),
+            initial_language="ar", use_initial_options=True,
+        )
+        qtbot.addWidget(widget)
+        widget.reset_transcriber_controls()
+        assert widget.transcription_options.openai_access_token == ""
+        widget.close()
+
+
+def test_switching_to_cloud_loads_the_existing_masked_key_once(qtbot):
+    from buzz.widgets.openai_api_key_line_edit import OpenAIAPIKeyLineEdit
+    from PyQt6.QtWidgets import QLineEdit
+    with patch("buzz.widgets.transcriber.file_transcriber_widget.get_password", return_value="test-api-key") as lookup:
+        widget = FileTranscriberWidget(
+            url="https://youtu.be/abcdefghijk",
+            initial_model=TranscriptionModel(model_type=ModelType.WHISPER),
+            initial_language="ar", use_initial_options=True,
+        )
+        qtbot.addWidget(widget)
+        lookup.assert_not_called()
+        widget.transcription_options.model.model_type = ModelType.OPEN_AI_WHISPER_API
+        widget.reset_transcriber_controls()
+        widget.reset_transcriber_controls()
+        lookup.assert_called_once()
+        field = widget.form_widget.findChild(OpenAIAPIKeyLineEdit)
+        assert field.echoMode() == QLineEdit.EchoMode.Password
+        assert field.text() == "test-api-key"
+        widget.close()
