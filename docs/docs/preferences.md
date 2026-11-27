@@ -32,6 +32,27 @@ This feature is available since `1.4.6`.
 
 **Base URL** - By default all requests are sent to API provided by OpenAI company. Their API URL is `https://api.openai.com/v1/`. Compatible APIs are also provided by other companies. List of available API URLs and services to run yourself are available on [discussion page](https://github.com/chidiwilliams/buzz/discussions/827)
 
+**API model** - `gpt-transcribe` is supported for text transcription. Select TXT
+only for text-only models. Use `whisper-1` when precise word timestamps or
+SRT/VTT output are required by an existing integration. Unknown custom model
+names retain the legacy compatible-API path.
+
+Known cloud transcription models use normalized, lossless audio chunks: a short
+first request, then chunks up to three minutes, split near pauses when possible.
+The task row shows downloading, preparation, and server-wait stages. Successful
+chunks are saved locally so retrying the same audio and settings can resume
+without submitting those chunks again. Requests have a finite timeout and are
+not automatically retried or switched to another paid model.
+
+Severe repeated output is rejected before completion/export. This heuristic can
+also flag intentional repetition and does not establish transcript accuracy;
+technical terms still need review.
+
+URL audio is retained under the platform's Buzz cache in `cloud-transcription`,
+along with successful cloud checkpoints and their API metadata. These files
+remain until that cache is removed. URL exports without an explicit destination
+go to `Buzz Transcripts` in the user's Documents directory.
+
 **Reduce GPU RAM** - Will slightly compressed model versions for Huggingface, Faster Whisper and Whisper.cpp transcriptions to reduce required GPU memory. Same as `BUZZ_REDUCE_GPU_MEMORY` advanced preference.
 
 ### Default export file name

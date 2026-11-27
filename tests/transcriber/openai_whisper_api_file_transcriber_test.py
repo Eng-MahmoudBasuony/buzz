@@ -84,6 +84,7 @@ class TestOpenAIWhisperAPIFileTranscriber:
         with patch(
             "buzz.transcriber.openai_whisper_api_file_transcriber.OpenAI"
         ) as mock:
+            mock.return_value.with_options.return_value = mock.return_value
             return_value = {
                 "text": "",
                 "segments": [{"start": 0, "end": 6.56, "text": "Hello"}],
@@ -153,6 +154,7 @@ class TestOpenAIWhisperAPIMetadata:
         with patch(
             "buzz.transcriber.openai_whisper_api_file_transcriber.OpenAI"
         ) as mock_openai:
+            mock_openai.return_value.with_options.return_value = mock_openai.return_value
             mock_openai.return_value.audio.transcriptions.create.return_value = response
             transcriber = OpenAIWhisperAPIFileTranscriber(task=task)
             segments = transcriber.transcribe()

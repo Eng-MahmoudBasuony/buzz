@@ -244,3 +244,16 @@ def metadata_dir(tmp_path, monkeypatch):
     path = tmp_path / "metadata"
     monkeypatch.setenv("BUZZ_METADATA_DIR", str(path))
     return path
+
+
+@pytest.fixture(autouse=True)
+def isolated_cloud_transcription_cache(tmp_path, monkeypatch):
+    """Keep audio/checkpoints and implicit URL exports out of the user's folders."""
+    import platformdirs
+    from buzz.transcriber import cloud_transcription
+
+    monkeypatch.setattr(cloud_transcription, "ROOT", tmp_path / "cloud-transcription")
+    monkeypatch.setattr(platformdirs, "user_documents_dir", lambda *args, **kwargs: str(tmp_path / "Documents"))
+    cloud_transcription.STAGES.clear()
+    yield
+    cloud_transcription.STAGES.clear()

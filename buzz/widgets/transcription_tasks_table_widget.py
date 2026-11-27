@@ -67,6 +67,10 @@ def format_record_status_text(record: QSqlRecord) -> str:
     status = FileTranscriptionTask.Status(record.value("status"))
     match status:
         case FileTranscriptionTask.Status.IN_PROGRESS:
+            from buzz.transcriber.cloud_transcription import STAGES
+            phase = STAGES.get(str(record.value("id")))
+            if phase:
+                return phase
             in_progress_label = _("In Progress")
             progress = record.value("progress")
             started_at = record.value("time_started")
