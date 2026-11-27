@@ -40,8 +40,20 @@ The modified application and Chrome integration have been tested on **macOS
 with Apple Silicon**. The Chrome bridge currently supports **macOS and Google
 Chrome**; this does not claim equivalent verification on other platforms.
 
-**No binary release has been published from this fork yet.** Future packaged
-builds belong on [this fork's Releases page](https://github.com/Eng-MahmoudBasuony/buzz/releases).
+**[Download Buzz for macOS — Apple Silicon (ZIP, 455 MB)](https://github.com/Eng-MahmoudBasuony/buzz/releases/download/v1.4.6-mb.1/Buzz-1.4.6-macOS-ARM64-Reviewed-137b1345.zip)**
+
+The current fork release is **[v1.4.6-mb.1](https://github.com/Eng-MahmoudBasuony/buzz/releases/tag/v1.4.6-mb.1)**,
+built from commit `137b1345`. Extract the ZIP and move `Buzz.app` to Applications.
+The application reports version `1.4.6`; `mb.1` identifies this fork release.
+This build is ad-hoc signed and is **not Apple notarized**. It is for Apple
+Silicon Macs; Windows and Intel Mac packages are not included in this release.
+
+Verify the download with the attached
+[SHA256SUMS](https://github.com/Eng-MahmoudBasuony/buzz/releases/download/v1.4.6-mb.1/SHA256SUMS).
+See [this fork's Releases page](https://github.com/Eng-MahmoudBasuony/buzz/releases)
+for release notes and packaged builds. Local transcription models are downloaded
+separately through Buzz.
+
 Upstream SourceForge, app-store and `buzz-captions` PyPI packages install the
 upstream distribution and do not include these fork-specific changes.
 
