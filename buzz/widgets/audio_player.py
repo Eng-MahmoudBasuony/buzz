@@ -108,6 +108,7 @@ class AudioPlayer(QWidget, DecodedAudioMixin):
 
     def _init_ui_widgets(self):
         self.scrubber = QSlider(Qt.Orientation.Horizontal)
+        self.scrubber.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.scrubber.setRange(0, 0)
         self.scrubber.sliderMoved.connect(self.on_slider_moved)
         self.scrubber.sliderPressed.connect(self.on_slider_pressed)
@@ -123,6 +124,7 @@ class AudioPlayer(QWidget, DecodedAudioMixin):
         self.play_button.setMinimumHeight(30)
 
         self.time_label = QLabel()
+        self.time_label.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     def _init_layout(self):

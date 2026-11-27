@@ -72,6 +72,8 @@ class Application(QApplication):
             self.setStyle(QStyleFactory.create("Fusion"))
 
         self.settings = Settings()
+        from buzz.locale import configure_ui_locale
+        configure_ui_locale(self)
         logging.debug(f"Settings filename: {self.settings.settings.fileName()}")
         
         # Set BUZZ_FORCE_CPU environment variable if Force CPU setting is enabled

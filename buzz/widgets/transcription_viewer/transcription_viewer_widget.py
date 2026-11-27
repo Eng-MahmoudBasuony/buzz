@@ -529,7 +529,7 @@ class TranscriptionViewerWidget(QWidget):
         loop_layout.addWidget(separator1)
 
         # Speed controls
-        speed_label = QLabel("Speed:")
+        speed_label = QLabel(_("Speed:"))
         speed_label.setStyleSheet("font-weight: bold;")
         loop_layout.addWidget(speed_label)
 

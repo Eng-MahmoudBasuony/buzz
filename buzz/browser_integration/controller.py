@@ -32,12 +32,12 @@ def create_task(url, uid, settings):
     if model.model_type == ModelType.OPEN_AI_WHISPER_API:
         token = get_password(Key.OPENAI_API_KEY)
         if not token:
-            raise ValueError("احفظ مفتاح API في Buzz الأول.")
+            raise ValueError("احفظ مفتاح API في إعدادات Buzz أولًا.")
         model_path = ""
     else:
         model_path = model.get_local_model_path()
         if not model_path:
-            raise ValueError("نزّل الموديل المحلي من Buzz الأول.")
+            raise ValueError("نزّل النموذج المحلي من Buzz أولًا.")
     output = Path(user_documents_dir()) / "Buzz Transcripts"
     output.mkdir(parents=True, exist_ok=True)
     return FileTranscriptionTask(
@@ -96,6 +96,7 @@ class BrowserController(QObject):
     def process(self, video):
         from uuid import uuid4
         from buzz.transcriber.cloud_transcription import STAGES
+        from buzz.locale import localize_transcription_message
         with self.store.locked():
             job = self.store.read(video)
             if job["state"] == "waiting":
@@ -116,7 +117,7 @@ class BrowserController(QObject):
                 self.update(video, state="queued", message="")
             except Exception:
                 log.error("Could not enqueue browser transcription; check Buzz model and credential settings")
-                self.update(video, state="failed", message="تعذر بدء التفريغ. راجع إعدادات الموديل والمفتاح في Buzz.")
+                self.update(video, state="failed", message="تعذّر بدء التفريغ. تحقّق من إعدادات النموذج ومفتاح API في Buzz.")
             return
         uid = job.get("task_uid")
         if job["state"] in {"failed", "canceled", "missing"}:
@@ -127,13 +128,13 @@ class BrowserController(QObject):
             return
         transcription = self.window.transcription_service.get_transcription(UUID(uid))
         if transcription is None:
-            self.update(video, state="missing", message="المهمة غير موجودة في Buzz. اضغط إعادة المحاولة لبدء مهمة جديدة.")
+            self.update(video, state="missing", message="المهمة غير موجودة في Buzz. اختر «إعادة المحاولة» لبدء مهمة جديدة.")
             return
         status = transcription.status
         values = {"state": status, "progress": max(0.0, min(float(transcription.progress or 0), 1.0)),
-                  "stage": STAGES.get(uid, "")}
+                  "stage": localize_transcription_message(STAGES.get(uid, ""))}
         if status in {"failed", "canceled"}:
-            values["message"] = "المهمة توقفت. راجع Buzz، ثم أعد المحاولة لو حابب."
+            values["message"] = "توقفت المهمة. راجع التفاصيل في Buzz قبل إعادة المحاولة."
         with self.store.locked():
             latest = self.store.read(video)
             open_result = status in {"completed", "skipped"} and latest.get("open_requested") is True

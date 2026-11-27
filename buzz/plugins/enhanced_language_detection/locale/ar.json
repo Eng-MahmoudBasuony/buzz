@@ -1,0 +1,6 @@
+{
+  "Detect the spoken language with whisper.cpp before transcription (using the largest downloaded model, or the tiny model otherwise) and use it for the transcription and exported file names. Only runs when the language is set to auto-detect.": "اكتشاف لغة الكلام باستخدام whisper.cpp قبل التفريغ، مع اختيار أكبر نموذج منزّل أو النموذج المصغّر عند عدم توفر غيره. تُستخدم اللغة المكتشفة في التفريغ وأسماء ملفات التصدير. يعمل فقط عند اختيار اكتشاف اللغة تلقائيًا.",
+  "Download tiny model if none available": "تنزيل النموذج المصغّر عند الحاجة",
+  "Enhanced language detection": "تحسين اكتشاف اللغة",
+  "If no whisper.cpp model is downloaded, download the tiny model to use for language detection.": "إذا لم يتوفر نموذج Whisper.cpp على الجهاز، يُنزّل النموذج المصغّر لاكتشاف اللغة."
+}

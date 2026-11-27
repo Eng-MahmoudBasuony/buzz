@@ -1,0 +1,7 @@
+{
+  "Export the transcript to a Microsoft Word (.docx) file after transcription, optionally including timestamps.": "حفظ النص في ملف Microsoft Word (.docx) بعد اكتمال التفريغ، مع إمكانية تضمين التوقيتات.",
+  "Export to DOCX": "تصدير إلى Word",
+  "Include timestamps": "تضمين التوقيتات",
+  "Leave empty to save next to the source file.": "اتركه فارغًا للحفظ بجوار الملف الأصلي.",
+  "Output folder": "مجلد النتائج"
+}

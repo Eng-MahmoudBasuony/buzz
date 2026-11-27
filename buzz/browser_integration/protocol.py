@@ -27,7 +27,7 @@ def canonical_video(value):
         raise ValueError("افتح فيديو يوتيوب أولًا.")
     parsed = urlsplit(value)
     if parsed.scheme != "https" or parsed.username or parsed.password or parsed.port:
-        raise ValueError("الرابط لازم يكون فيديو يوتيوب HTTPS.")
+        raise ValueError("يجب أن يكون الرابط لفيديو يوتيوب وأن يبدأ بـHTTPS.")
     host = parsed.hostname
     parts = parsed.path.strip("/").split("/")
     if host == "youtu.be" and len(parts) == 1:
@@ -42,7 +42,7 @@ def canonical_video(value):
     else:
         video = ""
     if not VIDEO_ID.fullmatch(video):
-        raise ValueError("افتح صفحة فيديو يوتيوب، مش صفحة القناة أو قائمة التشغيل.")
+        raise ValueError("افتح صفحة فيديو يوتيوب؛ صفحات القنوات وقوائم التشغيل غير مدعومة.")
     return video, "https://www.youtube.com/watch?v=" + video
 
 

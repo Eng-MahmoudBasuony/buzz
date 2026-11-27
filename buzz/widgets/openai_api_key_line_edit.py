@@ -14,6 +14,7 @@ class OpenAIAPIKeyLineEdit(LineEdit):
 
     def __init__(self, key: str, parent: Optional[QWidget] = None):
         super().__init__(key, parent)
+        self.set_technical_text()
 
         self.key = key
 

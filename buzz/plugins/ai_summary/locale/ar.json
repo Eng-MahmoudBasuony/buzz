@@ -1,0 +1,12 @@
+{
+  "AI Summary": "تلخيص النص بالذكاء الاصطناعي",
+  "API base URL": "عنوان خدمة API",
+  "API key": "مفتاح API",
+  "Generate an AI summary of the transcript via an OpenAI-compatible API and save it to the Notes field and/or a file.": "إنشاء ملخّص للنص عبر خدمة متوافقة مع OpenAI API، وحفظه في الملاحظات أو في ملف أو كليهما.",
+  "Leave empty to save next to the source file.": "اتركه فارغًا للحفظ بجوار الملف الأصلي.",
+  "Model": "النموذج",
+  "Output folder (for file)": "مجلد حفظ الملخّص",
+  "Save summary to Notes": "حفظ الملخّص في الملاحظات",
+  "Save summary to a file": "حفظ الملخّص في ملف",
+  "Summarization prompt": "تعليمات التلخيص"
+}

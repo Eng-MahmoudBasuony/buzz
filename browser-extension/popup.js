@@ -8,9 +8,9 @@ const retry = document.getElementById("retry");
 let port, timer, videoUrl, jobId;
 
 function fail(message) {
-  heading.textContent = "التفريغ ما بدأش";
+  heading.textContent = "تعذّر إكمال التفريغ";
   status.textContent = message;
-  hint.textContent = "افتح Buzz وتأكد من إعداداته، وبعدها جرّب تاني.";
+  hint.textContent = "افتح Buzz وتحقّق من إعداداته، ثم حاول مجددًا.";
   progress.hidden = true;
   clearInterval(timer);
 }
@@ -26,31 +26,31 @@ function connect() {
     if (!job) return;
     jobId = job.id;
     const states = {
-      waiting: ["جارٍ فتح Buzz…", "الفيديو اتبعت. مستني البرنامج يجهّز المهمة."],
-      submitting: ["جارٍ تجهيز المهمة…", "بنستخدم الإعدادات المحفوظة في Buzz."],
-      queued: ["الفيديو في الانتظار", "Buzz هيبدأ أول ما المهمة اللي قبله تخلص."],
-      in_progress: ["التفريغ شغّال", job.stage || "Buzz بيجهّز الصوت أو مستني نتيجة التفريغ."],
-      completed: ["النص جاهز ✓", "هتلاقي النص مفتوح في Buzz، ونسخة TXT محفوظة في المستندات."],
+      waiting: ["جارٍ فتح Buzz…", "أُرسل الفيديو. جارٍ تجهيز مهمة التفريغ."],
+      submitting: ["جارٍ تجهيز المهمة…", "تُستخدم الإعدادات المحفوظة في Buzz."],
+      queued: ["الفيديو في الانتظار", "سيبدأ التفريغ بعد اكتمال المهام السابقة."],
+      in_progress: ["جارٍ التفريغ", job.stage || "جارٍ تجهيز الصوت أو انتظار نتيجة التفريغ."],
+      completed: ["النص جاهز ✓", "سيفتح النص في Buzz. حُفظت أيضًا نسخة TXT في مجلد المستندات."],
       skipped: ["النص جاهز ✓", "تم استخدام النص الموجود وفتحه في Buzz."],
     };
     if (["failed", "canceled", "missing"].includes(job.state)) {
-      fail(job.message || "المهمة توقفت. راجع Buzz.");
+      fail(job.message || "توقفت المهمة. راجع التفاصيل في Buzz.");
       retry.hidden = false;
       return;
     }
-    const text = states[job.state] || ["التفريغ شغّال", "تقدر تتابع المهمة في Buzz."];
+    const text = states[job.state] || ["جارٍ التفريغ", "يمكنك متابعة المهمة في Buzz."];
     heading.textContent = text[0];
     status.textContent = text[1];
     if (job.state === "in_progress") progress.value = Math.round((job.progress || 0) * 100);
     if (["completed", "skipped"].includes(job.state)) {
       progress.value = 100;
-      hint.textContent = "الضغط على نفس الفيديو تاني بيفتح نفس النتيجة.";
+      hint.textContent = "الضغط على الفيديو نفسه مجددًا يفتح النتيجة المحفوظة.";
       clearInterval(timer);
     }
   });
   port.onDisconnect.addListener(() => {
     const error = chrome.runtime.lastError;
-    if (error) fail("وصلة Buzz غير متاحة. شغّل ملف إعداد الإضافة، وتأكد من تثبيت نسخة Buzz الداعمة لها.");
+    if (error) fail("تعذّر الاتصال بـBuzz. شغّل ملف إعداد الإضافة وتأكد من تثبيت نسخة Buzz الداعمة لها.");
     clearInterval(timer);
     port = null;
   });
@@ -61,7 +61,7 @@ async function start(retryJob = false) {
     const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
     const url = new URL(tab?.url || "");
     if (url.protocol !== "https:" || !["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(url.hostname)) {
-      throw new Error("افتح فيديو يوتيوب واضغط أيقونة Buzz من صفحته.");
+      throw new Error("افتح صفحة فيديو يوتيوب، ثم اضغط أيقونة Buzz.");
     }
     videoUrl = url.href;
     if (!port) connect();

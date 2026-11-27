@@ -22,7 +22,7 @@ def handle(message, store, launch=launch_buzz):
         return {"ok": True, "protocol": 1}
     config = read_json(store.root / "enabled.json")
     if config.get("enabled") is not True or config.get("origin") != ORIGIN:
-        raise ValueError("وصلة المتصفح غير مفعلة. شغّل ملف الإعداد أولًا.")
+        raise ValueError("التكامل مع المتصفح غير مفعّل. شغّل ملف الإعداد أولًا.")
     if action == "start":
         if set(message) - {"action", "url", "retry"} or type(message.get("retry", False)) is not bool:
             raise ValueError("Invalid start request")
@@ -51,7 +51,7 @@ def run(origin, source, destination, store=None, launch=launch_buzz):
             write_frame(destination, {"ok": False, "message": "تعذر قراءة طلب الإضافة. تأكد من الإعداد وصفحة الفيديو."})
             return 1
         except Exception:
-            write_frame(destination, {"ok": False, "message": "تعذر الاتصال بـBuzz. افتحه وجرّب تاني."})
+            write_frame(destination, {"ok": False, "message": "تعذّر الاتصال بـBuzz. افتح البرنامج ثم حاول مجددًا."})
             return 1
         write_frame(destination, response)
 

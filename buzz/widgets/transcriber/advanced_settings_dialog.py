@@ -84,7 +84,8 @@ class AdvancedSettingsDialog(QDialog):
         layout.addRow("", self.enable_llm_translation_checkbox)
 
         self.llm_model_line_edit = LineEdit(self.transcription_options.llm_model, self)
-        self.llm_model_line_edit.setPlaceholderText("add-model-id-here")
+        self.llm_model_line_edit.set_technical_text()
+        self.llm_model_line_edit.setPlaceholderText(_("Enter model ID"))
         self.llm_model_line_edit.textChanged.connect(self.on_llm_model_changed)
         self.llm_model_line_edit.setMinimumWidth(170)
         self.llm_model_line_edit.setEnabled(self.transcription_options.enable_llm_translation)
