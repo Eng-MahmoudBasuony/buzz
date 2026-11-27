@@ -1,115 +1,113 @@
-[[简体中文](readme/README.zh_CN.md)] <- 点击查看中文页面。
+# Buzz — Mahmoud Basuony fork
 
-# Buzz
+[العربية](readme/README.ar.md) · [Upstream project](https://github.com/chidiwilliams/buzz) · [Upstream documentation](https://chidiwilliams.github.io/buzz/) · [中文（上游）](readme/README.zh_CN.md)
 
-[Documentation](https://chidiwilliams.github.io/buzz/)
+Transcribe audio, video files and YouTube videos, then review, edit and export
+the resulting text. Local models run on your computer; supported API services
+are optional and billed separately by their providers.
 
-Transcribe and translate audio offline on your personal computer. Powered by
-OpenAI's [Whisper](https://github.com/openai/whisper).
+This is an independently maintained fork of **[Buzz](https://github.com/chidiwilliams/buzz)**,
+originally created by **Chidi Williams** and its contributors. The additions in
+this fork are maintained by **[Mahmoud Basuony](https://github.com/Eng-MahmoudBasuony)**.
+It is not an official upstream release. The original [MIT license](LICENSE) and
+copyright notice are retained.
 
-![MIT License](https://img.shields.io/badge/license-MIT-green)
-[![CI](https://github.com/chidiwilliams/buzz/actions/workflows/ci.yml/badge.svg)](https://github.com/chidiwilliams/buzz/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/github/chidiwilliams/buzz/branch/main/graph/badge.svg?token=YJSB8S2VEP)](https://codecov.io/github/chidiwilliams/buzz)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/chidiwilliams/buzz)
-[![Github all releases](https://img.shields.io/github/downloads/chidiwilliams/buzz/total.svg)](https://GitHub.com/chidiwilliams/buzz/releases/)
+## What's different in this fork
 
-![Buzz](https://raw.githubusercontent.com/chidiwilliams/buzz/refs/heads/main/buzz/assets/buzz-banner.jpg)
+- **Focused home:** YouTube link entry, language and model selection, recent
+  transcripts, real queue status and a searchable library.
+- **Dark transcript studio:** editable passages and timestamps, source details,
+  search, playback controls and a seekable waveform drawn from decoded audio.
+- **Professional Arabic interface:** contextual Arabic translations, RTL layouts,
+  bundled plugin translations, and LTR URLs, paths, timestamps and Latin code.
+  The interface language and the transcription language are separate settings.
+- **One-click YouTube transcription in Chrome:** send the current video to Buzz,
+  start transcription and open its text automatically when complete. Repeated
+  clicks reopen the saved result rather than starting another transcription.
+- **Transcription reliability:** resumable cloud transcription of files and
+  YouTube videos, clearer processing phases and explicit retry behavior. API
+  credentials remain in Buzz; preparing local file/YouTube jobs and opening
+  saved text do not require Keychain access.
 
-## Features
-- Transcribe audio and video files or Youtube links
-- Live realtime audio transcription from microphone
-  - Presentation window for easy accessibility during events and presentations
-- Speech separation before transcription for better accuracy on noisy audio
-- Speaker identification in transcribed media
-- Multiple whisper backend support
-  - CUDA acceleration support for Nvidia GPUs
-  - Apple Silicon support for Macs
-  - Vulkan acceleration support for Whisper.cpp on most GPUs, including integrated GPUs
-- Multiple Transformer model family support via Huggingface whisper type 
-- Export transcripts to TXT, SRT, and VTT
-- Advanced Transcription Viewer with search, playback controls, and speed adjustment
-- Keyboard shortcuts for efficient navigation
-- Watch folder for automatic transcription of new files
-- Command-Line Interface for scripting and automation
-- Plugin system with plugins like AI summary generation and automated transcript resizing
+The fork retains Buzz's existing local transcription backends, microphone
+recording, speaker separation/labeling, watch folders, plugins and **TXT, SRT
+and VTT** exports. See the [upstream documentation](https://chidiwilliams.github.io/buzz/)
+for the original feature set.
 
-## Installation
+## Getting this version
 
-### macOS
+The modified application and Chrome integration have been tested on **macOS
+with Apple Silicon**. The Chrome bridge currently supports **macOS and Google
+Chrome**; this does not claim equivalent verification on other platforms.
 
-Download the `.dmg` from the [SourceForge](https://sourceforge.net/projects/buzz-captions/files/).
+**No binary release has been published from this fork yet.** Future packaged
+builds belong on [this fork's Releases page](https://github.com/Eng-MahmoudBasuony/buzz/releases).
+Upstream SourceForge, app-store and `buzz-captions` PyPI packages install the
+upstream distribution and do not include these fork-specific changes.
 
-> **Intel Macs:** Buzz now requires Apple silicon. The last version to support
-> Intel Macs is **1.4.5**.
+For development, use this repository and its submodules, selecting the branch
+or tag containing the changes you want to build. The workspace and browser
+changes are tracked in [pull request #3](https://github.com/Eng-MahmoudBasuony/buzz/pull/3).
+This checkout requires **Python 3.13** as declared in [pyproject.toml](pyproject.toml).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for platform prerequisites and development
+guidance, using this fork's repository URL when cloning. Packaging is defined in
+[Makefile](Makefile) and [Buzz.spec](Buzz.spec).
 
-### Windows
+## Use the Arabic interface
 
-Get the installation files from the [SourceForge](https://sourceforge.net/projects/buzz-captions/files/).
+Choose **Preferences → General → UI Language → العربية**, then restart Buzz.
+Choose the spoken language separately when starting a transcription.
 
-App is not signed, you will get a warning when you install it. Select `More info` -> `Run anyway`.
+Read the [Arabic interface notes](docs/docs/arabic-ui.md) and
+[workspace guide](docs/docs/focused-workspace.md) for details.
 
-### Linux
+## Set up the Chrome extension
 
-Buzz is available as a [Flatpak](https://flathub.org/apps/io.github.chidiwilliams.Buzz), [Snap](https://snapcraft.io/buzz) or [Appimage](https://sourceforge.net/projects/buzz-captions/files/). 
+1. Install a matching build of this fork as `/Applications/Buzz.app`.
+2. From a prepared source checkout, register the local bridge:
 
-To install flatpak, run:
-```shell
-flatpak install flathub io.github.chidiwilliams.Buzz
-```
+   ```sh
+   uv run --no-sync python scripts/install_browser_extension.py
+   ```
 
-[![Download on Flathub](https://flathub.org/api/badge?svg&locale=en)](https://flathub.org/en/apps/io.github.chidiwilliams.Buzz)
+3. Open Chrome's extension manager, enable **Developer mode**, choose **Load
+   unpacked**, and select the repository's `browser-extension` folder.
+4. Pin **Buzz — YouTube to Text**, open a YouTube video, and click its toolbar
+   icon. Buzz opens the transcript automatically after completion.
 
-To install snap, run:
-```shell
-sudo apt-get install libportaudio2 libcanberra-gtk-module libcanberra-gtk3-module
-sudo snap install buzz
-```
+The extension uses Buzz's saved model and language settings. Download a local
+model first, or configure an API service in Buzz. API costs, if any, are charged
+by the configured provider. The extension does not receive your API key; its
+only permissions are `activeTab` and `nativeMessaging`.
 
-[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/buzz)
+A video page is required; channel and playlist pages are not accepted. Closing
+the popup does not cancel an already queued task. Failed or canceled jobs need
+an explicit retry. See the [extension guide](browser-extension/README.md) for
+requirements, setup and removal.
 
-### PyPI
+## Validation
 
-Install [ffmpeg](https://www.ffmpeg.org/download.html)
+Manual tests on the installed macOS application covered:
 
-Ensure you use Python 3.12 environment.
+- Local Arabic transcription, opening text, editing it, and reopening it to
+  verify that the changes were saved.
+- TXT, SRT and VTT export, including exported text and subtitle timings.
+- A real Chrome toolbar click on a previously untranscribed YouTube video:
+  Buzz launched, transcribed it locally, and opened the matching text without
+  another click.
+- Reopening the same video from the extension without creating another
+  transcription.
 
-Install Buzz
+Targeted Python/Qt and extension JavaScript tests also passed. These checks
+validate the workflow; recognition accuracy depends on the audio and model.
 
-```shell
-pip install buzz-captions
-python -m buzz
-```
+## Support and attribution
 
-**GPU support for PyPI**
+Report fork-specific problems in [this repository's issues](https://github.com/Eng-MahmoudBasuony/buzz/issues),
+including the OS, model and reproduction steps. Remove API keys and other
+sensitive information before sharing logs.
 
-To have GPU support for Nvidia GPUs on Windows, for PyPI installed version ensure, CUDA support for [torch](https://pytorch.org/get-started/locally/) 
-
-```
-pip3 install -U torch==2.8.0+cu129 torchaudio==2.8.0+cu129 --index-url https://download.pytorch.org/whl/cu129
-pip3 install nvidia-cublas-cu12==12.9.1.4 nvidia-cuda-cupti-cu12==12.9.79 nvidia-cuda-runtime-cu12==12.9.79 --extra-index-url https://pypi.nvidia.com
-```
-
-### Latest development version
-
-For info on how to get latest development version with latest features and bug fixes see [FAQ](https://chidiwilliams.github.io/buzz/docs/faq#9-where-can-i-get-latest-development-version).
-
-### Nvidia CUDA GPU acceleration
-
-If you are on Buzz version `1.4.6` (once it is released) or later and have a Nvidia GPU, go to `Help -> About Buzz` and install CUDA Acceleration.
-
-### Support Buzz
-
-You can help the Buzz by starring 🌟 the repo and sharing it with your friends.
-
-### Screenshots
-
-<div style="display: flex; flex-wrap: wrap;">
-    <img alt="File import" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-1-import.png" style="max-width: 18%; margin-right: 1%;" />
-    <img alt="Main screen" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-2-main_screen.png" style="max-width: 18%; margin-right: 1%; height:auto;" />
-    <img alt="Preferences" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-3-preferences.png" style="max-width: 18%; margin-right: 1%; height:auto;" />
-    <img alt="Model preferences" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-3.2-model-preferences.png" style="max-width: 18%; margin-right: 1%; height:auto;" />
-    <img alt="Transcript" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-4-transcript.png" style="max-width: 18%; margin-right: 1%; height:auto;" />
-    <img alt="Live recording" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-5-live_recording.png" style="max-width: 18%; margin-right: 1%; height:auto;" />
-    <img alt="Resize" src="https://github.com/chidiwilliams/buzz/raw/main/share/screenshots/buzz-6-resize.png" style="max-width: 18%;" />
-</div>
-
+The original project, documentation and releases remain available at
+[chidiwilliams/buzz](https://github.com/chidiwilliams/buzz). This fork keeps its
+own changes and release information separate while preserving the upstream
+project's attribution and [MIT license](LICENSE).
