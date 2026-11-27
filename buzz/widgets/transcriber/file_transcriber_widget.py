@@ -20,6 +20,7 @@ from buzz.transcriber.transcriber import (
     TranscriptionOptions,
 )
 from buzz.widgets.model_download_progress_dialog import ModelDownloadProgressDialog
+from buzz.widgets.openai_api_key_line_edit import OpenAIAPIKeyLineEdit
 from buzz.widgets.preferences_dialog.models.file_transcription_preferences import (
     FileTranscriptionPreferences,
 )
@@ -49,6 +50,9 @@ class FileTranscriberWidget(QWidget):
         url: Optional[str] = None,
         parent: Optional[QWidget] = None,
         flags: Qt.WindowType = Qt.WindowType.Widget,
+        initial_model=None,
+        initial_language=None,
+        use_initial_options: bool = False,
     ) -> None:
         super().__init__(parent, flags)
 
@@ -57,18 +61,24 @@ class FileTranscriberWidget(QWidget):
 
         self.setWindowTitle(self.get_title())
 
-        openai_access_token = get_password(Key.OPENAI_API_KEY)
-
         preferences = self.load_preferences()
+        self._openai_key_loaded = False
 
         (
             self.transcription_options,
             self.file_transcription_options,
         ) = preferences.to_transcription_options(
-            openai_access_token=openai_access_token,
+            openai_access_token="",
             file_paths=self.file_paths,
             url=url,
         )
+        if use_initial_options:
+            self.transcription_options.model = initial_model
+            self.transcription_options.language = initial_language
+            # This home is explicitly a transcription flow; keep the advanced
+            # dialog available for translation and other task types.
+            from buzz.transcriber.transcriber import Task
+            self.transcription_options.task = Task.TRANSCRIBE
 
         layout = QVBoxLayout(self)
 
@@ -216,6 +226,20 @@ class FileTranscriberWidget(QWidget):
         self.reset_transcriber_controls()
 
     def reset_transcriber_controls(self):
+        if (self.transcription_options.model.model_type == ModelType.OPEN_AI_WHISPER_API
+                and not self._openai_key_loaded):
+            self._openai_key_loaded = True
+            if not self.transcription_options.openai_access_token:
+                key = get_password(Key.OPENAI_API_KEY) or ""
+                self.transcription_options.openai_access_token = key
+                field = self.form_widget.findChild(OpenAIAPIKeyLineEdit)
+                if field is not None:
+                    # Loading an existing credential must not emit the signal
+                    # that saves a newly entered key back to Keychain.
+                    field.blockSignals(True)
+                    field.setText(key)
+                    field.key = key
+                    field.blockSignals(False)
         button_enabled = True
         if (self.transcription_options.model.model_type == ModelType.FASTER_WHISPER
                 and self.transcription_options.model.whisper_model_size == WhisperModelSize.CUSTOM

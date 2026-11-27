@@ -33,8 +33,10 @@ class TestFileTranscriberWidget:
         mock_triggered = Mock()
         widget.triggered.connect(mock_triggered)
 
-        with qtbot.wait_signal(widget.triggered, timeout=30 * 1000):
-            qtbot.mouseClick(widget.run_button, Qt.MouseButton.LeftButton)
+        # This tests the prepared-task signal, not a network model download.
+        with patch.object(widget.transcription_options.model, "get_local_model_path", return_value="/test/model"):
+            with qtbot.wait_signal(widget.triggered, timeout=1000):
+                qtbot.mouseClick(widget.run_button, Qt.MouseButton.LeftButton)
 
         (
             transcription_options,

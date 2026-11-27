@@ -1,0 +1,8 @@
+{
+  "Check for existing result files": "البحث عن ملفات نتائج موجودة",
+  "Check in transcription database": "البحث في سجل التفريغ",
+  "Skip Already Transcribed": "استخدام التفريغات الموجودة",
+  "Skip if a .txt, .srt, or .vtt file matching the audio filename is found next to it": "استخدام النتيجة الموجودة إذا وُجد ملف .txt أو .srt أو .vtt بالاسم نفسه بجوار ملف الصوت.",
+  "Skip if this file has already been transcribed and the record exists in the database": "استخدام النتيجة المحفوظة إذا سبق تفريغ الملف وكان سجله موجودًا في قاعدة البيانات.",
+  "Skip transcription if results already exist on disk or in the database": "تجنّب إعادة التفريغ عند وجود نتيجة محفوظة على الجهاز أو في قاعدة البيانات."
+}

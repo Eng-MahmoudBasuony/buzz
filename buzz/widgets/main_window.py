@@ -44,6 +44,7 @@ from buzz.transcriber.transcriber import (
 from buzz.widgets.icon import BUZZ_ICON_PATH
 from buzz.widgets.import_url_dialog import ImportURLDialog
 from buzz.widgets.main_window_toolbar import MainWindowToolbar
+from buzz.widgets.focus_home import FocusHome
 from buzz.widgets.menu_bar import MenuBar
 from buzz.widgets.system_tray import SystemTray
 from buzz.widgets.preferences_dialog.models.preferences import Preferences
@@ -163,7 +164,14 @@ class MainWindow(QMainWindow):
             self.on_transcriptions_updated
         )
 
-        self.setCentralWidget(self.table_widget)
+        self.home = FocusHome(self)
+        self.home.transcribe_requested.connect(self.on_home_transcribe_requested)
+        self.setCentralWidget(self.home)
+        # Keep the existing actions/shortcuts available without a second row
+        # of controls competing with the focused navigation.
+        self.addActions(self.toolbar.actions())
+        self.toolbar.hide()
+        self.setMinimumSize(920, 640)
 
         # Start transcriber thread
         self.transcriber_thread = QThread()
@@ -414,13 +422,18 @@ class MainWindow(QMainWindow):
         self.open_file_transcriber_widget(file_paths)
 
     def open_file_transcriber_widget(
-        self, file_paths: Optional[List[str]] = None, url: Optional[str] = None
+        self, file_paths: Optional[List[str]] = None, url: Optional[str] = None,
+        initial_model=None, initial_language=None, use_initial_options=False,
+        start_immediately=False,
     ):
         file_transcriber_window = FileTranscriberWidget(
             file_paths=file_paths,
             url=url,
             parent=self,
             flags=Qt.WindowType.Window,
+            initial_model=initial_model,
+            initial_language=initial_language,
+            use_initial_options=use_initial_options,
         )
         file_transcriber_window.triggered.connect(self.on_file_transcriber_triggered)
         file_transcriber_window.openai_access_token_changed.connect(
@@ -429,6 +442,25 @@ class MainWindow(QMainWindow):
         file_transcriber_window.show()
         file_transcriber_window.raise_()
         file_transcriber_window.activateWindow()
+        if start_immediately and file_transcriber_window.run_button.isEnabled():
+            file_transcriber_window.on_click_run()
+
+    def on_home_transcribe_requested(self, url, model, language, review):
+        file_paths = None
+        if not url:
+            last_folder = self.settings.value(Settings.Key.LAST_IMPORT_FOLDER, "")
+            file_paths, _filter = QFileDialog.getOpenFileNames(
+                self, _("Select audio file"), last_folder, SUPPORTED_AUDIO_FORMATS
+            )
+            if not file_paths:
+                return
+            file_paths = [resolve_document_portal_path(path) for path in file_paths]
+            self.settings.set_value(Settings.Key.LAST_IMPORT_FOLDER, os.path.dirname(file_paths[0]))
+        self.open_file_transcriber_widget(
+            file_paths=file_paths, url=url or None, initial_model=model,
+            initial_language=language, use_initial_options=True,
+            start_immediately=not review,
+        )
 
     @staticmethod
     def on_openai_access_token_changed(access_token: str):

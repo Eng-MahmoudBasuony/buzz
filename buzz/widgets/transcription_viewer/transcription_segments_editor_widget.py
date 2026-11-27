@@ -528,7 +528,7 @@ class TranscriptionSegmentsEditorWidget(QTableView):
         if self.has_speakers:
             fixed_column_widths += self.columnWidth(Column.SPEAKER.value)
         text_column_width = (
-            int((self.parent().width() - self.PARENT_PADDINGS - fixed_column_widths) / text_column_count))
+            max(160, int((self.viewport().width() - fixed_column_widths) / text_column_count)))
 
         self.setColumnWidth(Column.TEXT.value, text_column_width)
         self.setColumnWidth(Column.TRANSLATION.value, text_column_width)

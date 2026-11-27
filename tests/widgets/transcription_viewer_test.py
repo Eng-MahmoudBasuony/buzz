@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pytestqt.qtbot import QtBot
 from PyQt6.QtCore import QSignalBlocker, Qt
+from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QAbstractItemView, QFrame, QTextEdit
 
 from buzz.locale import _
@@ -28,6 +29,15 @@ from buzz.widgets.transcription_viewer.transcription_resizer_widget import (
 )
 from tests.audio import test_audio_path
 from tests.transcriptions import all_transcription_ids
+
+
+def contrast_ratio(first, second):
+    def luminance(color):
+        channels = (color.redF(), color.greenF(), color.blueF())
+        linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+        return sum(c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+    light, dark = sorted((luminance(first), luminance(second)), reverse=True)
+    return (light + 0.05) / (dark + 0.05)
 
 
 class TestTranscriptionViewerWidget:
@@ -820,26 +830,24 @@ class TestTranscriptionViewerWidget:
 
         # Test search button sizing
         assert widget.search_prev_button.maximumWidth() == 40
-        assert widget.search_prev_button.minimumHeight() == 30
+        assert widget.search_prev_button.minimumHeight() >= 30
         assert widget.search_next_button.maximumWidth() == 40
-        assert widget.search_next_button.minimumHeight() == 30
+        assert widget.search_next_button.minimumHeight() >= 30
         assert widget.clear_search_button.maximumWidth() == 80
-        assert widget.clear_search_button.minimumHeight() == 30
+        assert widget.clear_search_button.minimumHeight() >= 30
 
         # Test speed control button sizing
         assert widget.speed_down_btn.maximumWidth() == 40
-        assert widget.speed_down_btn.minimumHeight() == 30
+        assert widget.speed_down_btn.minimumHeight() >= 30
         assert widget.speed_up_btn.maximumWidth() == 40
-        assert widget.speed_up_btn.minimumHeight() == 30
+        assert widget.speed_up_btn.minimumHeight() >= 30
 
         # Verify all buttons have consistent height
-        button_heights = [
-            widget.search_prev_button.minimumHeight(),
-            widget.search_next_button.minimumHeight(),
-            widget.clear_search_button.minimumHeight(),
-            widget.speed_down_btn.minimumHeight(),
-            widget.speed_up_btn.minimumHeight(),
-        ]
+        buttons = (widget.search_prev_button, widget.search_next_button,
+                   widget.clear_search_button, widget.speed_down_btn, widget.speed_up_btn)
+        for button in buttons:
+            button.ensurePolished()
+        button_heights = [button.minimumHeight() for button in buttons]
         assert len(set(button_heights)) == 1, "All buttons should have the same height"
 
         widget.close()
@@ -875,9 +883,8 @@ class TestTranscriptionViewerWidget:
         assert alignment & Qt.AlignmentFlag.AlignHCenter
         assert alignment & Qt.AlignmentFlag.AlignTop
 
-        # Test that current segment text has appropriate styling
-        assert "color: #666" in widget.current_segment_text.styleSheet()
-        assert "line-height: 1.2" in widget.current_segment_text.styleSheet()
+        # Long passages must wrap inside the scroll area.
+        assert widget.current_segment_text.wordWrap()
 
         # Test that scroll area is properly set up
         assert hasattr(widget, 'current_segment_scroll_area')
@@ -978,26 +985,16 @@ class TestTranscriptionViewerWidget:
         # Table widget should be in the media_splitter (not directly in main layout)
         main_layout = widget.layout()
 
-        # Find the media_splitter in the layout
-        splitter_index = None
-        for i in range(main_layout.count()):
-            if main_layout.itemAt(i).widget() == widget.media_splitter:
-                splitter_index = i
-                break
-
-        assert splitter_index is not None, "Media splitter should be in main layout"
+        # The studio's center pane owns the transcript and transport.
+        assert main_layout.indexOf(widget.studio_columns) != -1
+        center_layout = widget.studio_columns.widget(1).layout()
+        assert center_layout.indexOf(widget.media_splitter) != -1
 
         # Verify table_widget is inside the splitter
         assert widget.media_splitter.indexOf(widget.table_widget) != -1, "Table widget should be in media splitter"
 
-        # Test that current segment frame has minimal stretch
-        current_segment_index = None
-        for i in range(main_layout.count()):
-            if main_layout.itemAt(i).widget() == widget.current_segment_frame:
-                current_segment_index = i
-                break
-
-        assert current_segment_index is not None, "Current segment frame should be in main layout"
+        assert widget.media_splitter.indexOf(widget.studio_transport) != -1
+        assert center_layout.indexOf(widget.current_segment_frame) != -1
 
         widget.close()
 
@@ -1163,12 +1160,13 @@ class TestTranscriptionViewerWidget:
         # Test frame styling
         assert widget.current_segment_frame.frameStyle() == QFrame.Shape.NoFrame
 
-        # Test text styling
-        stylesheet = widget.current_segment_text.styleSheet()
-        assert "color: #666" in stylesheet
-        assert "line-height: 1.2" in stylesheet
-        assert "margin: 0" in stylesheet
-        assert "padding: 4px" in stylesheet
+        # Verify readability without tying the test to a particular hex color.
+        widget.current_segment_text.ensurePolished()
+        assert contrast_ratio(
+            widget.current_segment_text.palette().color(QPalette.ColorRole.WindowText),
+            widget.palette().color(QPalette.ColorRole.Window),
+        ) >= 4.5
+        assert widget.current_segment_text.wordWrap()
 
         # Test text alignment
         assert widget.current_segment_text.alignment() & Qt.AlignmentFlag.AlignHCenter

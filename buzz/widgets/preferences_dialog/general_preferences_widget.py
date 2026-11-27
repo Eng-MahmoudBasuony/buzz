@@ -35,6 +35,7 @@ BASE64_PATTERN = re.compile(r'^[A-Za-z0-9+/=_-]*$')
 
 ui_locales = {
     "en_US": _("English"),
+    "ar": "العربية",
     "ca_ES": _("Catalan"),
     "da_DK": _("Danish"),
     "nl": _("Dutch"),
@@ -72,6 +73,8 @@ class GeneralPreferencesWidget(QWidget):
         self.ui_language_combo_box = QComboBox(self)
         self.ui_language_combo_box.addItems(ui_locales.values())
         system_locale = self.settings.value(Settings.Key.UI_LOCALE, QLocale().name())
+        if system_locale.replace("-", "_").split("_", 1)[0] == "ar":
+            system_locale = "ar"
         locale_index = 0
         for i, (code, language) in enumerate(ui_locales.items()):
             if code == system_locale:
@@ -152,6 +155,7 @@ class GeneralPreferencesWidget(QWidget):
         )
 
         self.custom_openai_base_url_line_edit = LineEdit(self.custom_openai_base_url, self)
+        self.custom_openai_base_url_line_edit.set_technical_text()
         self.custom_openai_base_url_line_edit.textChanged.connect(
             self.on_custom_openai_base_url_changed
         )
@@ -164,6 +168,7 @@ class GeneralPreferencesWidget(QWidget):
         )
 
         self.openai_api_model_line_edit = LineEdit(self.openai_api_model, self)
+        self.openai_api_model_line_edit.set_technical_text()
         self.openai_api_model_line_edit.textChanged.connect(
             self.on_openai_api_model_changed
         )
@@ -200,6 +205,7 @@ class GeneralPreferencesWidget(QWidget):
 
         recording_export_folder_row = QHBoxLayout()
         self.recording_export_folder_line_edit = LineEdit(recording_export_folder, self)
+        self.recording_export_folder_line_edit.set_technical_text()
         self.recording_export_folder_line_edit.textChanged.connect(self.on_recording_export_folder_changed)
         self.recording_export_folder_line_edit.setObjectName("RecordingExportFolderLineEdit")
 

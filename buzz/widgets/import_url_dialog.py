@@ -19,6 +19,7 @@ class ImportURLDialog(QDialog):
         self.setWindowTitle(_("Import URL"))
 
         self.line_edit = LineEdit()
+        self.line_edit.set_technical_text()
         self.line_edit.setPlaceholderText(_("https://example.com/audio.mp3"))
         self.line_edit.setMinimumWidth(350)
 

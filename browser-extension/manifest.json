@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Buzz — YouTube to Text",
+  "version": "1.0.0",
+  "description": "ابدأ تفريغ فيديو يوتيوب في Buzz بضغطة واحدة.",
+  "permissions": [
+    "activeTab",
+    "nativeMessaging"
+  ],
+  "action": {
+    "default_title": "تفريغ الفيديو في Buzz",
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0vzfOIAZQU2//emuJy8pYCseswDq0adjbLrwOTcclvU0hHxcHmK/2+ilbPll7tpuni1+3dATCORk/9hDy37qq/AH9nPsHyEIYkF20oTbU4qk9FXmqgjwymFDTU6ElxtVbsLWK34QAAerrmvK0hbhLNJaBP8X5O3L/BwAhdibWvOoPSykVwniwzppOH1JKVXOUeXPDjYBdHy2MGz31vYGGfnL8TeQH/p/av4OQ33wSyAPU+xy0BaZ/tTtYSeZIaaJzThBNfz1ePe0//d6Xm5nhp6guX0UwbPXGt18hktEiJJSI3yppz9SykEAJEREl0mxsexdFxEAUs214IIJwVT9KQIDAQAB",
+  "icons": {
+    "16": "icon.png",
+    "32": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}

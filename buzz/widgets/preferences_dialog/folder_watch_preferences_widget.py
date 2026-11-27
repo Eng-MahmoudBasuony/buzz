@@ -70,7 +70,8 @@ class FolderWatchPreferencesWidget(QWidget):
 
         input_folder_row = QHBoxLayout()
         self.input_folder_line_edit = LineEdit(config.input_directory, self)
-        self.input_folder_line_edit.setPlaceholderText("/path/to/input/folder")
+        self.input_folder_line_edit.set_technical_text()
+        self.input_folder_line_edit.setPlaceholderText(_("Select Input Folder"))
         self.input_folder_line_edit.textChanged.connect(self.on_input_folder_changed)
         self.input_folder_line_edit.setObjectName("InputFolderLineEdit")
 
@@ -79,7 +80,8 @@ class FolderWatchPreferencesWidget(QWidget):
 
         output_folder_row = QHBoxLayout()
         self.output_folder_line_edit = LineEdit(config.output_directory, self)
-        self.output_folder_line_edit.setPlaceholderText("/path/to/output/folder")
+        self.output_folder_line_edit.set_technical_text()
+        self.output_folder_line_edit.setPlaceholderText(_("Select Output Folder"))
         self.output_folder_line_edit.textChanged.connect(self.on_output_folder_changed)
         self.output_folder_line_edit.editingFinished.connect(
             self.on_output_folder_editing_finished

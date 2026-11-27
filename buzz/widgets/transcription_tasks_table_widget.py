@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from buzz import metadata_cache
 from buzz.db.entity.transcription import Transcription
-from buzz.locale import _
+from buzz.locale import _, localize_transcription_message
 from buzz.settings.settings import Settings
 from buzz.transcriber.transcriber import FileTranscriptionTask, Task, TASK_LABEL_TRANSLATIONS
 from buzz.widgets.record_delegate import RecordDelegate
@@ -70,7 +70,7 @@ def format_record_status_text(record: QSqlRecord) -> str:
             from buzz.transcriber.cloud_transcription import STAGES
             phase = STAGES.get(str(record.value("id")))
             if phase:
-                return phase
+                return localize_transcription_message(phase)
             in_progress_label = _("In Progress")
             progress = record.value("progress")
             started_at = record.value("time_started")
@@ -83,10 +83,10 @@ def format_record_status_text(record: QSqlRecord) -> str:
                         remaining_s = (1 - progress) * elapsed_s / progress
                         # format seconds into human-readable string
                         if remaining_s >= 60:
-                            eta_str = f"{int(remaining_s // 60)}m {int(remaining_s % 60)}s"
+                            eta_str = _("{minutes}m {seconds}s").format(minutes=int(remaining_s // 60), seconds=int(remaining_s % 60))
                         else:
-                            eta_str = f"{int(remaining_s)}s"
-                        return f"{in_progress_label} ({progress:.0%}) — ETA: {eta_str}"
+                            eta_str = _("{seconds}s").format(seconds=int(remaining_s))
+                        return _("{status} ({progress:.0%}) — ETA: {eta}").format(status=in_progress_label, progress=progress, eta=eta_str)
                 except (ValueError, OSError):
                     pass
             return f"{in_progress_label} ({progress:.0%})"
@@ -99,7 +99,7 @@ def format_record_status_text(record: QSqlRecord) -> str:
             return status
         case FileTranscriptionTask.Status.FAILED:
             failed_label = _("Failed")
-            return f'{failed_label} ({record.value("error_message")})'
+            return f'{failed_label} ({localize_transcription_message(record.value("error_message"))})'
         case FileTranscriptionTask.Status.CANCELED:
             return _("Canceled")
         case FileTranscriptionTask.Status.QUEUED:
@@ -560,7 +560,7 @@ class TranscriptionTasksTableWidget(QTableView):
         all_columns.sort(key=lambda x: x[1])
 
         # Move sections to match the saved order
-        for target_visual, (logical_index, _) in enumerate(all_columns):
+        for target_visual, (logical_index, _saved_position) in enumerate(all_columns):
             current_visual = header.visualIndex(logical_index)
             if current_visual != target_visual:
                 header.moveSection(current_visual, target_visual)
@@ -646,14 +646,14 @@ class TranscriptionTasksTableWidget(QTableView):
     @staticmethod
     def format_timedelta(delta: timedelta):
         mm, ss = divmod(delta.seconds, 60)
-        result = f"{ss}s"
+        result = _("{seconds}s").format(seconds=ss)
         if mm == 0:
             return result
         hh, mm = divmod(mm, 60)
-        result = f"{mm}m {result}"
+        result = _("{minutes}m {rest}").format(minutes=mm, rest=result)
         if hh == 0:
             return result
-        return f"{hh}h {result}"
+        return _("{hours}h {rest}").format(hours=hh, rest=result)
 
     def on_rename_action(self):
         selected_rows = self.selectionModel().selectedRows()

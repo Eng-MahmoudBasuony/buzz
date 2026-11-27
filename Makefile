@@ -210,6 +210,7 @@ gh_upgrade_pr:
 # Internationalization
 
 translation_po_all:
+	$(MAKE) translation_po locale=ar
 	$(MAKE) translation_po locale=ca_ES
 	$(MAKE) translation_po locale=da_DK
 	$(MAKE) translation_po locale=de_DE

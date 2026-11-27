@@ -1,0 +1,6 @@
+{
+  "File name": "اسم الملف",
+  "Name of the exported files, without extension. Available variables: {{ input_file_name }}, {{ task }}, {{ language }}, {{ model_type }}, {{ model_size }}, {{ date_time }}. A file with the same name is overwritten.": "اسم الملفات المصدّرة دون الامتداد. المتغيرات المتاحة: {{ input_file_name }} و{{ task }} و{{ language }} و{{ model_type }} و{{ model_size }} و{{ date_time }}. سيُستبدل أي ملف موجود بالاسم نفسه.",
+  "Re-export after editing": "إعادة التصدير بعد التحرير",
+  "When a transcript is changed in the transcript viewer, export it again in the formats chosen when it was transcribed, once the viewer is closed. Transcripts that were not exported are skipped.": "عند تعديل النص، يُعاد تصديره بعد إغلاق نافذته بالصيغ التي اخترتها عند التفريغ. لا يشمل ذلك النصوص التي لم تُصدّر من قبل."
+}
