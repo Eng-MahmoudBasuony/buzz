@@ -1,1 +1,4 @@
-- Use uv to run tests and any scripts
+- Use uv to run tests and any scripts.
+- Review changes before publishing or merging, and report any unresolved findings.
+- Publish commits, branches, pull requests, and code reviews only to `Eng-MahmoudBasuony/buzz`.
+- Treat `chidiwilliams/buzz` and the `upstream` remote as read-only references. Do not push, open pull requests, or submit reviews, issues, or comments there.
