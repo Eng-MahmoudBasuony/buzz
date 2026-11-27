@@ -70,6 +70,10 @@ class OpenAIWhisperAPIFileTranscriber(FileTranscriber):
         return segments
 
     def _transcribe(self) -> List[Segment]:
+        from buzz.transcriber.cloud_transcription import reliable_transcribe
+        return reliable_transcribe(self)
+
+    def _legacy_transcribe(self) -> List[Segment]:
         logging.debug(
             "Starting OpenAI Whisper API file transcription, file path = %s, task = %s",
             self.transcription_task.file_path,

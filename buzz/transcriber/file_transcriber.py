@@ -151,6 +151,24 @@ class FileTranscriber(QObject):
         # Imported here as it is only needed for URL imports and slows app startup
         from yt_dlp import YoutubeDL
 
+        from platformdirs import user_documents_dir
+        from buzz.transcriber.cloud_transcription import ROOT, cached_audio, preserve_audio, url_key
+        import json
+
+        task = self.transcription_task
+        if not task.output_directory:
+            output = Path(user_documents_dir()) / "Buzz Transcripts"
+            output.mkdir(parents=True, exist_ok=True)
+            task.output_directory = str(output)
+        cached = cached_audio(task.url)
+        if cached:
+            task.file_path = str(cached)
+            task.original_file_path = None
+            metadata = json.loads((ROOT / "audio" / url_key(task.url) / "source.json").read_text())
+            task.display_name = metadata.get("display_name") or task.display_name
+            self.download_progress.emit(1.0)
+            return True
+
         cookiefile = os.getenv("BUZZ_DOWNLOAD_COOKIEFILE")
 
         temp_dir = Path(tempfile.mkdtemp()).resolve()
@@ -239,7 +257,8 @@ class FileTranscriber(QObject):
             self.error.emit(message)
             return False
 
-        self.transcription_task.file_path = str(wav_file)
+        saved_audio = preserve_audio(task.url, wav_file, task.display_name)
+        self.transcription_task.file_path = str(saved_audio)
         # A path kept from an earlier run's speech extraction points at the
         # previous download, not this one.
         self.transcription_task.original_file_path = None

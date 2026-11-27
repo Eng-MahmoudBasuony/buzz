@@ -579,10 +579,14 @@ class MainWindow(QMainWindow):
     def on_task_download_progress(
         self, task: FileTranscriptionTask, fraction_downloaded: float
     ):
-        # TODO: Save download progress in the database
-        pass
+        from buzz.transcriber.cloud_transcription import STAGES
+        fraction = max(0.0, min(fraction_downloaded, 1.0))
+        STAGES[str(task.uid)] = f"Downloading audio ({fraction:.0%})"
+        self.on_task_progress(task, fraction * 0.2)
 
     def on_task_completed(self, task: FileTranscriptionTask, segments: List[Segment]):
+        from buzz.transcriber.cloud_transcription import STAGES
+        STAGES.pop(str(task.uid), None)
         # A result already on its way when the transcription was deleted or
         # canceled. Saving it would fail the segments' foreign key of a deleted
         # row, or turn a canceled one into completed.
@@ -677,6 +681,8 @@ class MainWindow(QMainWindow):
             self.transcription_service.delete_transcription_metadata(task.uid)
 
     def on_task_error(self, task: FileTranscriptionTask, error: str):
+        from buzz.transcriber.cloud_transcription import STAGES
+        STAGES.pop(str(task.uid), None)
         if not self.transcription_service.is_transcription_deleted_or_canceled(task.uid):
             self.transcription_service.update_transcription_as_failed(task.uid, error)
             self.table_widget.refresh_row(task.uid)
