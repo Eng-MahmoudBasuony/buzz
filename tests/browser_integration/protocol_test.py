@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("fcntl", reason="The macOS browser bridge requires POSIX file locks")
+
 from buzz.browser_integration import EXTENSION_ID
 from buzz.browser_integration.protocol import (
     Store, ORIGIN, canonical_video, read_frame, write_frame, atomic_json, public_status,
@@ -59,6 +61,16 @@ def test_completed_job_is_reopened_instead_of_resubmitted(tmp_path):
     store.save(job)
     assert store.start(URL + "&t=22")["task_uid"] == "finished"
     assert store.read("abcdefghijk")["open_requested"] is True
+
+
+def test_skipped_job_is_reopened_instead_of_resubmitted(tmp_path):
+    store = Store(tmp_path)
+    job = store.start(URL)
+    job.update(state="skipped", task_uid="finished", open_requested=False)
+    store.save(job)
+    reopened = store.start(URL)
+    assert reopened["task_uid"] == "finished"
+    assert reopened["open_requested"] is True
 
 
 def test_status_never_exposes_credentials_paths_or_raw_api_response():

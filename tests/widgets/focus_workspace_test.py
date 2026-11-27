@@ -147,6 +147,11 @@ class FakePlayer(QObject):
         self.scrubber.setRange(0, 10000)
         self.samples = samples
         self.set_position = Mock()
+        self.range_ms = None
+
+    def on_slider_moved(self, position):
+        from buzz.widgets.audio_player import AudioPlayer
+        AudioPlayer.on_slider_moved(self, position)
 
     def decoded_samples(self):
         return self.samples
@@ -174,6 +179,29 @@ def test_waveform_uses_real_samples_and_silence_remains_flat(qtbot):
     assert np.isfinite(waveform.peaks).all()
     assert waveform.peaks.max() == 1
     assert waveform.layoutDirection() == Qt.LayoutDirection.LeftToRight
+
+
+def test_waveform_seek_outside_selected_passage_clears_repeat_range(qtbot):
+    player = FakePlayer(None)
+    player.range_ms = (1000, 2000)
+    waveform = WaveformSeekBar(player)
+    qtbot.addWidget(waveform)
+    waveform.setValue(8000)
+    player.set_position.assert_called_once_with(8000)
+    assert player.range_ms is None
+
+
+def test_studio_recent_results_survive_many_newer_unfinished_tasks(qtbot, window):
+    from buzz.widgets.transcription_viewer.studio_panels import library_panel, LibraryEntryButton
+    dao = window.transcription_service.transcription_dao
+    completed = Transcription(name="Saved result", status="completed", time_queued="2026-01-01T00:00:00")
+    dao.insert(completed)
+    for index in range(13):
+        dao.insert(Transcription(name=f"Waiting {index}", status="queued", time_queued="2026-02-01T00:00:00"))
+    viewer = Mock(transcription=completed, transcription_service=window.transcription_service)
+    panel = library_panel(viewer)
+    qtbot.addWidget(panel)
+    assert [button.name for button in panel.findChildren(LibraryEntryButton)] == ["Saved result"]
 
 
 def test_opening_studio_never_requests_keychain_access(qtbot, window, tmp_path):

@@ -4,6 +4,9 @@ from pathlib import Path
 import plistlib
 
 import pytest
+
+pytest.importorskip("fcntl", reason="The macOS browser bridge requires POSIX file locks")
+
 from buzz.browser_integration.protocol import ORIGIN
 
 

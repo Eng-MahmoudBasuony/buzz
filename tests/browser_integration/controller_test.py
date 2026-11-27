@@ -3,6 +3,9 @@ from unittest.mock import Mock
 from uuid import uuid4, UUID
 
 import pytest
+
+pytest.importorskip("fcntl", reason="The macOS browser bridge requires POSIX file locks")
+
 from PyQt6.QtWidgets import QWidget
 
 from buzz.browser_integration.controller import BrowserController, create_task
@@ -36,14 +39,15 @@ def test_click_polling_and_repeated_click_do_not_submit_twice(bridge):
     assert factory.call_count == window.add_task.call_count == 1
 
 
-def test_result_opens_only_after_database_completion(bridge):
+@pytest.mark.parametrize("finished_status", ["completed", "skipped"])
+def test_result_opens_only_after_database_completion(bridge, finished_status):
     window, controller, factory, record = bridge
     controller.store.start(URL)
     controller.poll()
     record.status = "in_progress"
     controller.poll()
     window.open_transcription_viewer.assert_not_called()
-    record.status, record.progress = "completed", 1
+    record.status, record.progress = finished_status, 1
     controller.poll()
     controller.poll()
     window.open_transcription_viewer.assert_called_once_with(record)

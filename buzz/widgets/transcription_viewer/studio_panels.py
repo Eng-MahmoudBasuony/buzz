@@ -112,7 +112,9 @@ class WaveformSeekBar(QSlider):
         player.scrubber.rangeChanged.connect(self.setRange)
         player.position_ms_changed.connect(self.follow_position)
         player.scrubber.valueChanged.connect(self.follow_position)
-        self.valueChanged.connect(player.set_position)
+        # Preserve the player's seek policy, including leaving a selected
+        # passage's repeat range when the user seeks elsewhere.
+        self.valueChanged.connect(player.on_slider_moved)
         self.timer = QTimer(self)
         self.timer.setInterval(1000)
         self.timer.timeout.connect(self.load_peaks)
@@ -321,7 +323,12 @@ def library_panel(viewer):
     # Use the same connection and read-only query as the normal library.
     dao = viewer.transcription_service.transcription_dao
     query = dao._create_query()
-    query.prepare("SELECT * FROM transcription ORDER BY time_queued DESC LIMIT 12")
+    query.prepare(
+        "SELECT * FROM transcription WHERE status IN (:completed, :skipped) "
+        "ORDER BY time_queued DESC LIMIT 12"
+    )
+    query.bindValue(":completed", FileTranscriptionTask.Status.COMPLETED.value)
+    query.bindValue(":skipped", FileTranscriptionTask.Status.SKIPPED.value)
     if query.exec():
         while query.next():
             transcription = Transcription.from_record(query.record())

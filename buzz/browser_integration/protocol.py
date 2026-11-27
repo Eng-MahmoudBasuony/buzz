@@ -91,7 +91,7 @@ class Store:
             if job is None or (retry and job.get("state") in {"failed", "canceled", "missing"}):
                 job = {"id": video, "url": url, "state": "waiting", "progress": 0,
                        "created": time.time(), "open_requested": True}
-            elif job.get("state") == "completed":
+            elif job.get("state") in {"completed", "skipped"}:
                 job["open_requested"] = True
             self.save(job)
         return job

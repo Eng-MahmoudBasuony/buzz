@@ -31,7 +31,7 @@ def test_arabic_covers_all_source_messages_without_empty_or_fuzzy_entries():
     for path in (ROOT / "buzz").rglob("*.py"):
         if "__pycache__" in path.parts:
             continue
-        tree = ast.parse(path.read_text())
+        tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
                     and node.func.id == "_" and node.args
@@ -68,11 +68,11 @@ def test_bundled_plugin_arabic_has_complete_source_keys(path, monkeypatch):
     monkeypatch.setattr(base, "_current_locale", lambda: "ar_EG")
     strings = set()
     plugin = path.parent.parent / "plugin.py"
-    for node in ast.walk(ast.parse(plugin.read_text())):
+    for node in ast.walk(ast.parse(plugin.read_text(encoding="utf-8"))):
         if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
                 and node.func.id == "_" and node.args and isinstance(node.args[0], ast.Constant)):
             strings.add(node.args[0].value)
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     assert strings == data.keys()
     assert all(isinstance(value, str) and value.strip() for value in data.values())
     localized = base.plugin_gettext(str(plugin))
