@@ -49,6 +49,9 @@ class FileTranscriberWidget(QWidget):
         url: Optional[str] = None,
         parent: Optional[QWidget] = None,
         flags: Qt.WindowType = Qt.WindowType.Widget,
+        initial_model=None,
+        initial_language=None,
+        use_initial_options: bool = False,
     ) -> None:
         super().__init__(parent, flags)
 
@@ -69,6 +72,13 @@ class FileTranscriberWidget(QWidget):
             file_paths=self.file_paths,
             url=url,
         )
+        if use_initial_options:
+            self.transcription_options.model = initial_model
+            self.transcription_options.language = initial_language
+            # This home is explicitly a transcription flow; keep the advanced
+            # dialog available for translation and other task types.
+            from buzz.transcriber.transcriber import Task
+            self.transcription_options.task = Task.TRANSCRIBE
 
         layout = QVBoxLayout(self)
 

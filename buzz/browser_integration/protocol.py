@@ -4,15 +4,13 @@ import fcntl
 import json
 import os
 from pathlib import Path
-import re
 import struct
 import tempfile
 import time
-from urllib.parse import parse_qs, urlsplit
 
 from buzz.browser_integration import EXTENSION_ID
+from buzz.youtube_url import VIDEO_ID, canonical_video
 
-VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
 ORIGIN = f"chrome-extension://{EXTENSION_ID}/"
 MAX_MESSAGE = 65536
 
@@ -20,30 +18,6 @@ MAX_MESSAGE = 65536
 def bridge_root():
     from platformdirs import user_data_dir
     return Path(user_data_dir("Buzz")) / "browser-bridge"
-
-
-def canonical_video(value):
-    if not isinstance(value, str) or len(value) > 4096:
-        raise ValueError("افتح فيديو يوتيوب أولًا.")
-    parsed = urlsplit(value)
-    if parsed.scheme != "https" or parsed.username or parsed.password or parsed.port:
-        raise ValueError("يجب أن يكون الرابط لفيديو يوتيوب وأن يبدأ بـHTTPS.")
-    host = parsed.hostname
-    parts = parsed.path.strip("/").split("/")
-    if host == "youtu.be" and len(parts) == 1:
-        video = parts[0]
-    elif host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
-        if parsed.path == "/watch":
-            video = parse_qs(parsed.query).get("v", [""])[0]
-        elif len(parts) == 2 and parts[0] in {"shorts", "live", "embed"}:
-            video = parts[1]
-        else:
-            video = ""
-    else:
-        video = ""
-    if not VIDEO_ID.fullmatch(video):
-        raise ValueError("افتح صفحة فيديو يوتيوب؛ صفحات القنوات وقوائم التشغيل غير مدعومة.")
-    return video, "https://www.youtube.com/watch?v=" + video
 
 
 def read_json(path):

@@ -2232,3 +2232,84 @@ msgstr "سرعة التشغيل:"
 
 msgid "Enter model ID"
 msgstr "أدخل معرّف النموذج"
+
+msgid "Add a YouTube link or choose a file from your device."
+msgstr "أضف رابط يوتيوب أو اختر ملفًا من جهازك."
+
+msgid "Audio or video file"
+msgstr "ملف صوتي أو فيديو"
+
+msgid "Audio recording"
+msgstr "تسجيل صوتي"
+
+msgid "Audio timeline"
+msgstr "المخطط الزمني للصوت"
+
+msgid "Choose an audio or video file to review its transcription settings."
+msgstr "اختر ملفًا صوتيًا أو فيديو، ثم راجع إعدادات التفريغ قبل البدء."
+
+msgid "Choose file…"
+msgstr "اختيار ملف…"
+
+msgid "Double-click a passage to edit. Changes are saved automatically."
+msgstr "انقر مرتين على المقطع لتعديله. تُحفظ التغييرات تلقائيًا."
+
+msgid "Enter a valid YouTube video link."
+msgstr "أدخل رابط فيديو صالحًا من يوتيوب."
+
+msgid "Library"
+msgstr "المكتبة"
+
+msgid "Model size"
+msgstr "حجم النموذج"
+
+msgid "More actions"
+msgstr "خيارات إضافية"
+
+msgid "New transcription"
+msgstr "تفريغ جديد"
+
+msgid "Paste"
+msgstr "لصق"
+
+msgid "Recent transcripts"
+msgstr "آخر النصوص"
+
+msgid "Review advanced settings"
+msgstr "مراجعة الإعدادات المتقدمة"
+
+msgid "Search transcripts…"
+msgstr "البحث في النصوص…"
+
+msgid "Show in library"
+msgstr "عرض في المكتبة"
+
+msgid "Source"
+msgstr "المصدر"
+
+msgid "Start transcription"
+msgstr "ابدأ التفريغ"
+
+msgid "Transcript"
+msgstr "النص"
+
+msgid "Transcription details"
+msgstr "تفاصيل التفريغ"
+
+msgid "Turn video into text"
+msgstr "حوّل الفيديو إلى نص"
+
+msgid "Video link"
+msgstr "رابط الفيديو"
+
+msgid "YouTube link"
+msgstr "رابط يوتيوب"
+
+msgid "Your completed transcripts will appear here."
+msgstr "ستظهر النصوص التي انتهى تفريغها هنا."
+
+msgid "Media from a link"
+msgstr "وسائط من رابط"
+
+msgid "Open source video"
+msgstr "فتح الفيديو الأصلي"

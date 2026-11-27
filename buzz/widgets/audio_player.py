@@ -18,12 +18,12 @@ class AudioPlayer(QWidget, DecodedAudioMixin):
     position_ms_changed = pyqtSignal(int)
     playback_state_changed = pyqtSignal(QMediaPlayer.PlaybackState)
 
-    def __init__(self, file_path: str, decode_audio: bool = True):
+    def __init__(self, file_path: str, decode_audio: bool = True, parent=None):
         """
         Without `decode_audio` the file plays through Qt multimedia only, for
         a player that is kept around but not used.
         """
-        super().__init__()
+        super().__init__(parent)
         self._init_state(file_path)
         self._init_sounddevice()
         self._init_media_player(file_path)

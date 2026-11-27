@@ -71,6 +71,10 @@ from buzz.widgets.transcription_viewer.transcription_view_mode_tool_button impor
     ViewMode
 )
 from buzz.widgets.transcription_viewer.transcription_resizer_widget import TranscriptionResizerWidget
+from buzz.widgets.workspace_style import STUDIO_STYLE, apply_workspace_palette
+from buzz.widgets.transcription_viewer.studio_panels import (
+    WaveformSeekBar, library_panel, source_panel, style_transcript_table,
+)
 
 # Underlying libs do not support intel Macs
 if not (platform.system() == "Darwin" and platform.machine() == "x86_64"):
@@ -79,7 +83,7 @@ if not (platform.system() == "Darwin" and platform.machine() == "x86_64"):
 
 class TranscriptionViewerWidget(QWidget):
     AUDIO_PLAYER_MAX_HEIGHT = 80
-    MINIMUM_WIDTH = 800
+    MINIMUM_WIDTH = 1120
     resize_button_clicked = pyqtSignal()
     # Emitted once when the viewer closes: the transcription id and whether
     # the transcript was changed while the viewer was open
@@ -97,12 +101,15 @@ class TranscriptionViewerWidget(QWidget):
         transcriptions_updated_signal: Optional[pyqtSignal] = None,
     ) -> None:
         super().__init__(parent, flags)
+        self.setObjectName("TranscriptStudio")
+        apply_workspace_palette(self, dark=True)
+        self.setStyleSheet(STUDIO_STYLE)
         self.transcription = transcription
         self.transcription_service = transcription_service
         self.shortcuts = shortcuts
 
         self.setMinimumWidth(self.MINIMUM_WIDTH)
-        self.setMinimumHeight(500)
+        self.setMinimumHeight(680)
         self.setWindowTitle(file_path_as_title(transcription.file))
 
         self.transcription_resizer_dialog = None
@@ -121,7 +128,9 @@ class TranscriptionViewerWidget(QWidget):
         self._init_search_debounce()
         self._load_segments_and_settings()
 
-        self.openai_access_token = get_password(Key.OPENAI_API_KEY)
+        # Reading/editing a saved transcript is local work. Request Keychain
+        # access only when the user explicitly chooses API translation.
+        self.openai_access_token = None
         preferences = self.load_preferences()
         (
             self.transcription_options,
@@ -223,7 +232,7 @@ class TranscriptionViewerWidget(QWidget):
         # A video plays in the video player, so this one need not decode the
         # audio a second time
         self.audio_player = AudioPlayer(
-            file_path=self.transcription.file, decode_audio=not self.is_video)
+            file_path=self.transcription.file, decode_audio=not self.is_video, parent=self)
         self.video_player = None
 
         self.media_player_stack = QStackedWidget()
@@ -238,7 +247,7 @@ class TranscriptionViewerWidget(QWidget):
             )
 
         if self.is_video:
-            self.video_player = VideoPlayer(file_path=self.transcription.file)
+            self.video_player = VideoPlayer(file_path=self.transcription.file, parent=self)
             self.media_player_stack.addWidget(self.video_player)
 
         self.current_media_player = None
@@ -294,6 +303,8 @@ class TranscriptionViewerWidget(QWidget):
 
     def _setup_toolbar(self):
         toolbar = ToolBar(self)
+        toolbar.setStyleSheet("")
+        self.studio_toolbar = toolbar
 
         self.view_mode_tool_button = TranscriptionViewModeToolButton(
             self.shortcuts,
@@ -306,6 +317,7 @@ class TranscriptionViewerWidget(QWidget):
         toolbar.addWidget(self.view_mode_tool_button)
 
         export_tool_button = QToolButton()
+        export_tool_button.setObjectName("StudioExport")
         export_tool_button.setText(_("Export"))
         export_tool_button.setIcon(FileDownloadIcon(self))
         export_tool_button.setToolButtonStyle(
@@ -374,14 +386,51 @@ class TranscriptionViewerWidget(QWidget):
     def _finalize_ui(self):
         self.create_search_bar()
         layout = self.layout()
+        layout.setContentsMargins(18, 12, 18, 18)
+        layout.setSpacing(12)
+        title = QLabel(self.transcription.name or (
+            file_path_as_title(self.transcription.file) if self.transcription.file
+            else self.transcription.url or _("Transcript")
+        ))
+        title.setTextFormat(Qt.TextFormat.PlainText)
+        title.setWordWrap(True)
+        title.setObjectName("StudioTitle")
+        layout.addWidget(title)
 
-        layout.addWidget(self.search_frame, 0)
-        layout.addWidget(self.speaker_filter_frame, 0)
+        self.studio_columns = QSplitter(Qt.Orientation.Horizontal)
+        self.studio_columns.setHandleWidth(12)
+        self.studio_library = library_panel(self)
+        self.studio_source = source_panel(self)
+        center = QFrame()
+        center.setObjectName("StudioPanel")
+        center_layout = QVBoxLayout(center)
+        center_layout.setContentsMargins(12, 12, 12, 12)
+        center_layout.setSpacing(10)
+        heading = QLabel(_("Transcript"))
+        heading.setProperty("role", "heading")
+        center_layout.addWidget(heading)
+        center_layout.addWidget(self.search_frame, 0)
+        center_layout.addWidget(self.speaker_filter_frame, 0)
 
         self.media_splitter = QSplitter(Qt.Orientation.Vertical)
         self.media_splitter.setHandleWidth(8)
         self.media_splitter.addWidget(self.table_widget)
-        self.media_splitter.addWidget(self.media_player_stack)
+        if self.is_video:
+            self.studio_transport = QWidget()
+            transport_layout = QHBoxLayout(self.studio_transport)
+            transport_layout.setContentsMargins(0, 0, 0, 0)
+            transport_layout.addWidget(self.video_player.play_button)
+            self.waveform = WaveformSeekBar(self.video_player, self)
+            transport_layout.addWidget(self.waveform, 1)
+            transport_layout.addWidget(self.video_player.time_label)
+            self.video_player.scrubber.hide()
+        else:
+            self.studio_transport = self.media_player_stack
+            self.waveform = WaveformSeekBar(self.audio_player, self)
+            self.audio_player.layout().replaceWidget(self.audio_player.scrubber, self.waveform)
+            self.audio_player.scrubber.hide()
+        self.studio_transport.setMaximumHeight(self.AUDIO_PLAYER_MAX_HEIGHT)
+        self.media_splitter.addWidget(self.studio_transport)
         self.media_splitter.setCollapsible(0, False)
         self.media_splitter.setCollapsible(1, False)
         self.media_splitter.setStretchFactor(0, 1)
@@ -389,10 +438,28 @@ class TranscriptionViewerWidget(QWidget):
         self.media_splitter.splitterMoved.connect(self.on_splitter_moved)
 
         self.create_loop_controls()
+        center_layout.addWidget(self.media_splitter, 1)
+        center_layout.addWidget(self.text_display_box, 1)
+        center_layout.addWidget(self.current_segment_frame, 1)
+        # Logical order follows the UI locale: library at the leading edge,
+        # transcript in the middle, source at the trailing edge.
+        self.studio_columns.addWidget(self.studio_library)
+        self.studio_columns.addWidget(center)
+        self.studio_columns.addWidget(self.studio_source)
+        self.studio_columns.setCollapsible(0, False)
+        self.studio_columns.setCollapsible(1, False)
+        self.studio_columns.setCollapsible(2, False)
+        self.studio_columns.setStretchFactor(1, 1)
+        self.studio_columns.setSizes([210, 750, 260])
+        layout.addWidget(self.studio_columns, 1)
         layout.addWidget(self.loop_controls_frame, 0)
-        layout.addWidget(self.media_splitter, 1)
-        layout.addWidget(self.text_display_box, 0)
-        layout.addWidget(self.current_segment_frame, 1)
+        self.table_widget.setShowGrid(False)
+        self.table_widget.setFont(QFont(self.font().family(), max(14, self.font().pointSize())))
+        style_transcript_table(self.table_widget)
+        self.table_widget.init_row_height()
+        self.current_segment_text.setStyleSheet("color: #c8d9d4; padding: 8px;")
+        self.search_results_label.setStyleSheet("color: #a0b5b5;")
+        self.show_search_bar()
 
         self.current_segment_frame.hide()
 
@@ -1527,6 +1594,8 @@ class TranscriptionViewerWidget(QWidget):
         )
 
     def on_translate_button_clicked(self):
+        if self.openai_access_token is None:
+            self.openai_access_token = get_password(Key.OPENAI_API_KEY) or ""
         if len(self.openai_access_token) == 0:
             QMessageBox.information(
                 self,
@@ -1877,7 +1946,7 @@ class TranscriptionViewerWidget(QWidget):
             self.restoreGeometry(geometry)
         else:
             # Default size if no saved geometry
-            self.resize(1000, 800)
+            self.resize(1420, 860)
         self.settings.end_group()
 
     def save_splitter_sizes(self):
@@ -1921,7 +1990,7 @@ class TranscriptionViewerWidget(QWidget):
             # setSizes() does not respect the player's maximum height, so a
             # stale saved size would leave empty space below the audio player
             # and squeeze the transcript table. Give the excess to the table.
-            if not self.is_video and len(sizes) == 2:
+            if len(sizes) == 2:
                 table_size, player_size = sizes
                 capped_player_size = min(player_size, self.AUDIO_PLAYER_MAX_HEIGHT)
                 sizes = [table_size + player_size - capped_player_size, capped_player_size]

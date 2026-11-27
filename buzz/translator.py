@@ -46,10 +46,7 @@ class Translator(QObject):
                 key=Settings.Key.CUSTOM_OPENAI_BASE_URL, default_value=""
             )
         )
-        self.openai_api_key = os.getenv(
-            "BUZZ_TRANSLATION_API_KEY",
-            get_password(Key.OPENAI_API_KEY)
-        )
+        self.openai_api_key = None
         self.openai_base_url = custom_openai_base_url if custom_openai_base_url else None
         self._openai_client = None
 
@@ -59,6 +56,9 @@ class Translator(QObject):
         # half a second and every transcription viewer creates a Translator
         if self._openai_client is None:
             from openai import OpenAI
+
+            if self.openai_api_key is None:
+                self.openai_api_key = os.getenv("BUZZ_TRANSLATION_API_KEY") or get_password(Key.OPENAI_API_KEY)
 
             self._openai_client = OpenAI(
                 api_key=self.openai_api_key,
